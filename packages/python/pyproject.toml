@@ -23,10 +23,35 @@ agentproof = "agentproof.cli.app:main"
 [dependency-groups]
 dev = [
     "pytest>=9.1",
+    "ruff>=0.17",
+    "mypy>=2.4",
+    "import-linter>=2.15",
+    # Workspace member providing `uv run check` (story 1.2, ARCH-4). A dev
+    # dependency only; it is never part of the shipped `agentproof` wheel.
+    "agentproof-devtools",
 ]
+
+[tool.uv.workspace]
+members = ["devtools"]
+
+[tool.uv.sources]
+agentproof-devtools = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/agentproof"]
+
+[tool.ruff]
+line-length = 100
+# Both source roots, so ruff sorts `agentproof_devtools` as first-party like `agentproof`.
+src = [".", "src", "devtools/src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+strict = true
+plugins = ["pydantic.mypy"]
+files = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

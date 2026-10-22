@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import tomllib
+import zipfile
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -117,6 +118,15 @@ def installed_cli(tmp_path_factory: pytest.TempPathFactory) -> Path:
     _run([uv, "pip", "install", "--python", str(python), str(wheel)])
     assert script.is_file(), f"console script missing after install: {script}"
     return script
+
+
+def test_wheel_contains_only_the_agentproof_package(installed_cli: Path) -> None:
+    """Criterion 4: the shipped wheel never carries the devtools workspace member."""
+    wheel = next(installed_cli.parents[1].parent.glob("dist/agentproof-*.whl"))
+    members = zipfile.ZipFile(wheel).namelist()
+    allowed = ("agentproof/", f"agentproof-{_pyproject_version()}.dist-info/")
+    assert all(member.startswith(allowed) for member in members), members
+    assert not any("agentproof_devtools" in member for member in members), members
 
 
 def test_version_prints_pyproject_version_and_exits_zero(installed_cli: Path) -> None:
