@@ -1,4 +1,30 @@
-# Local-only files. Epic 1 story 5 extends this file.
+# Local-only files (story 1.5). Nothing here is ever committed; see CONTRIBUTING.md.
+
+# Agent tooling installed per machine.
 .claude/skills/
+
+# Python environments and build output.
 .venv/
+dist/
+build/
+*.egg-info/
+
+# Bytecode and tool caches.
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.import_linter_cache/
+.hypothesis/
+
+# AgentProof run output and local state (PROJECT_SPEC.md: never commit real traces).
 agentproof-output/
+.agentproof-*
+
+# Per-user BMAD overrides.
+_bmad/custom/*.user.toml
+
+# Intentionally NOT ignored: examples/**/traces/ holds the recorded example traces that
+# the documented quick start replays; they are tracked on purpose. Do not add an
+# `examples` rule here.

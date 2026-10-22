@@ -1,0 +1,15 @@
+# Line-ending policy (story 1.5). The repository is developed on Windows and tested on
+# Linux; `text=auto` normalizes every text file to LF in the index, and the rules below
+# pin the working-tree ending where bytes matter regardless of `core.autocrlf`.
+* text=auto
+
+# Golden files are compared byte for byte (architecture AD-17); they must be LF everywhere.
+**/tests/golden/** text eol=lf
+
+# Generated JSON Schemas (AD-4) are committed and checked for drift byte for byte.
+schemas/*.json text eol=lf
+
+# Lock files and POSIX shell scripts stay LF; Windows batch files stay CRLF.
+*.lock text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf
