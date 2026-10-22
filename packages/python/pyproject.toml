@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+# Provisional pending OQ-1: the PyPI project `agentproof` is taken by another
+# agent-testing package. See docs/decisions/0000-distribution-name.md. The import
+# name `agentproof` is settled; only the distribution name is open.
+name = "agentproof"
+version = "0.1.0.dev0"
+description = "Local-first, framework-neutral testing and regression framework for tool-using AI agents."
+requires-python = ">=3.12,<4"
+dependencies = [
+    "pydantic>=2.14,<3",
+    "typer>=0.27,<1",
+    "rich>=15,<16",
+    "pyyaml>=6.0.3,<7",
+]
+
+[project.scripts]
+agentproof = "agentproof.cli.app:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentproof"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
