@@ -3,7 +3,7 @@ title: 'Import contracts encode the dependency direction'
 type: 'feature'
 ticket: '3'
 created: '2026-10-23'
-status: 'built'
+status: done
 baseline_revision: '8afabe2973e7192a607bd1fb423d3bf36020efef'
 route: 'full'
 route_source: 'pinned'
