@@ -1,0 +1,143 @@
+# Import contracts for the agentproof package (architecture AD-2, dependency direction).
+# Checked by the `lint-imports` step of `uv run check` from packages/python. The root
+# package is resolved through the Python path, so the file holds module names only.
+[importlinter]
+root_packages =
+    agentproof
+
+# AD-2 layer order, top to bottom. A layer may import the layers below it, never the
+# ones above; siblings joined with `|` are independent and may not import each other.
+# The effectful shell packages `io`, `adapters`, and `testing` sit outside the layers
+# and are bound by the forbidden contracts below.
+[importlinter:contract:layers]
+name = AD-2 dependency direction (layers)
+type = layers
+layers =
+    agentproof.cli
+    agentproof.runner
+    agentproof.reports | agentproof.compare
+    agentproof.engine
+    agentproof.loading | agentproof.redaction | agentproof.assertions
+    agentproof.models
+    agentproof.constants
+    agentproof.errors
+
+
+# Direct imports only for every forbidden contract below: the spine's allow-lists are direct-import
+# rules, and the layers contract already governs transitive structure. Without this,
+# legal chains such as testing -> adapters -> io would count as violations.
+[importlinter:contract:io]
+name = io imports only errors, constants, redaction
+type = forbidden
+source_modules =
+    agentproof.io
+forbidden_modules =
+    agentproof.adapters
+    agentproof.assertions
+    agentproof.cli
+    agentproof.compare
+    agentproof.engine
+    agentproof.loading
+    agentproof.models
+    agentproof.reports
+    agentproof.runner
+    agentproof.testing
+allow_indirect_imports = True
+
+
+[importlinter:contract:adapters]
+name = adapters imports only errors, constants, models, loading, io
+type = forbidden
+source_modules =
+    agentproof.adapters
+forbidden_modules =
+    agentproof.assertions
+    agentproof.cli
+    agentproof.compare
+    agentproof.engine
+    agentproof.redaction
+    agentproof.reports
+    agentproof.runner
+    agentproof.testing
+allow_indirect_imports = True
+
+
+[importlinter:contract:testing]
+name = testing imports only models, loading, adapters, errors
+type = forbidden
+source_modules =
+    agentproof.testing
+forbidden_modules =
+    agentproof.assertions
+    agentproof.cli
+    agentproof.compare
+    agentproof.constants
+    agentproof.engine
+    agentproof.io
+    agentproof.redaction
+    agentproof.reports
+    agentproof.runner
+allow_indirect_imports = True
+
+# Direct imports only: `cli` may import the package top level, which will itself
+# import core modules once the public API exists (AD-15), so indirect chains are legal.
+[importlinter:contract:cli]
+name = cli imports only runner and io
+type = forbidden
+source_modules =
+    agentproof.cli
+forbidden_modules =
+    agentproof.adapters
+    agentproof.assertions
+    agentproof.compare
+    agentproof.constants
+    agentproof.engine
+    agentproof.errors
+    agentproof.loading
+    agentproof.models
+    agentproof.redaction
+    agentproof.reports
+    agentproof.testing
+allow_indirect_imports = True
+
+[importlinter:contract:nothing-imports-cli]
+name = nothing imports cli
+type = forbidden
+source_modules =
+    agentproof.adapters
+    agentproof.assertions
+    agentproof.compare
+    agentproof.constants
+    agentproof.engine
+    agentproof.errors
+    agentproof.io
+    agentproof.loading
+    agentproof.models
+    agentproof.redaction
+    agentproof.reports
+    agentproof.runner
+    agentproof.testing
+forbidden_modules =
+    agentproof.cli
+
+# AD-1: the pure core never reaches the effectful shell, directly or otherwise.
+[importlinter:contract:core-imports-no-shell]
+name = core imports no shell package
+type = forbidden
+source_modules =
+    agentproof.constants
+    agentproof.errors
+    agentproof.models
+    agentproof.loading
+    agentproof.redaction
+    agentproof.assertions
+    agentproof.engine
+    agentproof.reports
+    agentproof.compare
+forbidden_modules =
+    agentproof.io
+    agentproof.adapters
+    agentproof.runner
+    agentproof.cli
+    agentproof.testing
+allow_indirect_imports = True
