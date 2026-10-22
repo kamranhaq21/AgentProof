@@ -3,7 +3,7 @@ title: 'One check entry point runs ruff, mypy, and pytest'
 type: 'feature'
 ticket: '2'
 created: '2026-10-22'
-status: 'built'
+status: done
 baseline_revision: 'f12115c3b08b575ec14247bf88b0d5bb7981dbe9'
 route: 'full'
 route_source: 'pinned'
