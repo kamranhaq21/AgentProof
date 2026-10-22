@@ -3,7 +3,7 @@ title: 'Package scaffold installs and prints its version'
 type: 'feature'
 ticket: '1'
 created: '2026-10-22'
-status: 'built'
+status: done
 baseline_revision: '5a4dc1b73057df125a63fa191dfa5d8520d1af0b'
 route: 'full'
 route_source: 'pinned'
