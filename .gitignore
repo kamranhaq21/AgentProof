@@ -1,0 +1,4 @@
+# Local-only files. Epic 1 story 5 extends this file.
+.claude/skills/
+.venv/
+agentproof-output/

@@ -1,0 +1,58 @@
+# Epic 6: JSON and HTML reports. Table order is build order.
+
+[[entry]]
+id = 1
+type = "story"
+title = "build_report, the JSON Report writer, and report.json from run and replay"
+description = "Adds reports.build.build_report as the only Report constructor, reports.json_report.dumps in Canonical form, and the pipeline steps writing report.json after the Traces for run and replay-<id>.report.json for replay, with the first Report golden file."
+verify = "After run, report.json validates against schemas/report-v1 and its counts equal the listed results; after replay, replay-<id>.report.json exists and report.json is untouched; the golden test passes on both platforms."
+covers = ["R1", "R3"]
+after = ["5.3", "5.4"]
+hitl = false
+risk = "medium"
+references = ["_bmad-output/initiative-agentproof-mvp/architecture-agentproof/architecture-agentproof.md#ad-13--one-pipeline-one-report-builder-one-writer"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "HTML renderer with escaping, CSP, and the collapse rule"
+description = "Adds reports.html.render assembling the page from string templates with html.escape in element and quoted-attribute positions only, the CSP meta tag, no external resources, text status labels, labeled missing and redacted values, evidence-referenced Events expanded, and the 500-event collapse."
+verify = "The vector test renders <script>, </script>, attribute quotes, and a javascript: URL as visible text; the page has no external URLs; an Evidence Event beyond position 500 is still expanded."
+covers = ["R2"]
+after = [1]
+hitl = false
+risk = "high"
+references = ["_bmad-output/initiative-agentproof-mvp/architecture-agentproof/architecture-agentproof.md#ad-12--safe-html-rendering"]
+
+[[entry]]
+id = 3
+type = "story"
+title = "report command"
+description = "Wires report REPORT_PATH --format json|html [--output FILE] through load_report, render_html, dumps_report, and write_atomic, deriving the HTML name from the JSON name, and rejects junit with exit 2."
+verify = "report report.json --format html writes report.html next to it and exits 0; --output other.html writes there; --format junit exits 2 with one line."
+covers = ["R5"]
+after = [2]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 4
+type = "story"
+title = "Golden-file tests on both platforms and the HTML size bound"
+description = "Adds golden tests for Trace, Report, and HTML that strip VOLATILE_PATHS, verifies .gitattributes keeps them LF, and adds the 10,000-Event Report size test."
+verify = "The golden tests pass on Linux and Windows CI, fail when a volatile field is compared, and the 10,000-Event HTML Report is under 10 MB."
+covers = ["R3", "R4"]
+after = [3]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 5
+type = "story"
+title = "Refactor sweep"
+description = "Cleanup only, scoped at start from the plans and review findings of stories 1 to 4; no new behavior."
+verify = "uv run check stays green and the diff touches only what the sweep scope lists."
+covers = ["R1"]
+after = [1, 2, 3, 4]
+hitl = false
+risk = "low"

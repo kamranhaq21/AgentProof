@@ -1,0 +1,35 @@
+# Epic 11: One framework adapter selected after user validation. Table order is build order. Every entry waits on the gate.
+
+[[entry]]
+id = 1
+type = "spike"
+title = "Pick the framework from the interview data"
+description = "Reads the epic 5 interview record, counts which framework the would-be adopters use, and records a dated decision naming one framework or none for v0.1; if one, this epic's Requirements are written."
+verify = "The epic file carries a dated Decision line naming the framework or none, and refined is true with Requirements when one is named."
+covers = []
+after = ["5.1"]
+hitl = true
+risk = "medium"
+unknown = "OQ-15: which framework Adapter ships in v0.1, if any; decided from the interviews."
+
+[[entry]]
+id = 2
+type = "story"
+title = "Adapter implementation as an optional extra"
+description = "Implements adapters/<name> against the protocol with an entry point, an optional extra in pyproject, a Capture declaration matching what the framework exposes, and the framework SDK imported nowhere else."
+verify = "pip install agentproof[<name>] registers the adapter, lint-imports passes, and a scripted test agent produces a Trace with the declared Capture."
+covers = []
+after = [1, "4.6", "5.2"]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 3
+type = "story"
+title = "Conformance, limits, and a credentialed example run"
+description = "Runs the conformance check on the adapter, documents its known limitations, adds a docs page, and a person runs the example Suite against a real agent with a credential and confirms the Trace is redacted."
+verify = "The conformance check passes in CI without credentials; the credentialed run's exported Trace contains the marker where the key was and the adapter page is in the docs test."
+covers = []
+after = [2]
+hitl = true
+risk = "medium"

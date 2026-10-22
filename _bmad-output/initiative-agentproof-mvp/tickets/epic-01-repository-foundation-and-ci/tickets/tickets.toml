@@ -1,0 +1,80 @@
+# Epic 1: Repository foundation and CI. Table order is build order.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Package scaffold installs and prints its version"
+description = "Creates the src layout under packages/python, pyproject.toml with four runtime dependencies and provisional name, uv lock, empty subpackages per the spine tree, and a version command; a person records the provisional name and runs the first sync."
+verify = "On a clean machine, build the wheel, install it into a fresh venv, run agentproof version, and see the pyproject version printed with exit 0."
+covers = ["R1", "R2"]
+after = []
+hitl = true
+risk = "medium"
+references = ["_bmad-output/initiative-agentproof-mvp/architecture-agentproof/architecture-agentproof.md#structural-seed"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "One check entry point runs ruff, mypy, and pytest"
+description = "Adds ruff check and format config, mypy --strict with the pydantic plugin, pytest config, and the uv run check entry point that runs them in the spine's order and stops on the first failure."
+verify = "uv run check passes on the scaffold; introducing an unused import, a type error, and a failing test each make it exit non-zero at the right step."
+covers = ["R3"]
+after = [1]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 3
+type = "story"
+title = "Import contracts encode the dependency direction"
+description = "Writes .importlinter with the AD-2 layer and forbidden contracts and the ruff banned-API list for AD-1, wired into the check entry point, with a negative test proving each contract bites."
+verify = "lint-imports passes on the scaffold and fails when a test commit imports agentproof.cli from agentproof.models or calls open() inside agentproof.engine."
+covers = ["R4"]
+after = [2]
+hitl = false
+risk = "medium"
+references = ["_bmad-output/initiative-agentproof-mvp/architecture-agentproof/architecture-agentproof.md#ad-2--dependency-direction"]
+
+[[entry]]
+id = 4
+type = "story"
+title = "CI runs the check entry point on Linux and Windows across Python 3.12 to 3.15"
+description = "Adds .github/workflows/ci.yml with SHA-pinned actions, least-privilege permissions, a matrix of ubuntu-latest and windows-latest by 3.12, 3.13, 3.14, 3.15, and a single step calling the check entry point; a person enables branch protection on main."
+verify = "A pull request shows eight green check jobs, and a deliberately failing test turns them red."
+covers = ["R3", "R5"]
+after = [2, 5]
+hitl = true
+risk = "medium"
+
+[[entry]]
+id = 5
+type = "story"
+title = "Repository hygiene files and decision records"
+description = "Adds .gitignore, .gitattributes with LF for golden files, .editorconfig, .pre-commit-config.yaml, CONTRIBUTING with the branch and 0.x policy, SECURITY, CODE_OF_CONDUCT, and docs/decisions holding ADR-001 to ADR-020 from the architecture run."
+verify = "A fresh clone on Windows checks out tests/golden files with LF endings, pre-commit runs ruff, and docs/decisions lists twenty ADR files."
+covers = ["R5", "R6"]
+after = [1]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 6
+type = "story"
+title = "CI builds the wheel, smoke-installs it, and audits dependencies"
+description = "Adds CI jobs that build the wheel, install it into a clean venv, run agentproof version, run pip-audit, and attach the wheel to a draft GitHub release on a tag, without publishing."
+verify = "On a tag push the workflow produces a draft release with the wheel attached, the smoke job prints the version, and pip-audit reports no known vulnerabilities."
+covers = ["R1", "R5"]
+after = [4]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 7
+type = "story"
+title = "Refactor sweep"
+description = "Cleanup only, scoped at start from the plans and review findings of stories 1 to 6; no new behavior."
+verify = "uv run check and CI stay green and the diff touches only what the sweep scope lists."
+covers = ["R3"]
+after = [1, 2, 3, 4, 5, 6]
+hitl = false
+risk = "low"

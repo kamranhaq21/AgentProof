@@ -1,0 +1,103 @@
+# Epic 4: Deterministic assertion engine. Table order is build order.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Engine: evaluate_scenario, status fold, and the SuiteOutcome constructor"
+description = "Adds engine.status.combine, engine.evaluate_scenario with the skip, execution-error, absent-Trace, evaluate precedence and per-Assertion fan-out, engine.fold, and evaluate_suite, using a stub evaluator registry; demoable as a test printing a SuiteOutcome."
+verify = "A Scenario with skip yields all-skipped and suite status skipped; an absent Trace with fail_on_missing_trace true yields error results with execution_error set; one failed among passed folds to failed; evaluated_assertions excludes skipped."
+covers = ["R1"]
+after = ["2.4"]
+hitl = false
+risk = "high"
+references = ["_bmad-output/initiative-agentproof-mvp/architecture-agentproof/architecture-agentproof.md#ad-6--one-status-fold-one-exit-code-module-skip-and-absence-decided-in-core"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "parse_trace, load_trace, and the trace validate command"
+description = "Adds loading.trace.parse_trace and the shell load_trace through io.read_limited, with version, ordering, size, and format errors, and wires trace validate TRACE_PATH."
+verify = "trace validate exits 0 on each example fixture Trace and 2 with one line on an unsupported version, a seq gap, a 6 MB file, and invalid JSON."
+covers = ["R2"]
+after = ["2.3", "3.1", "3.3"]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 3
+type = "story"
+title = "Assertion registry with tool_called and tool_not_called"
+description = "Adds assertions.base, assertions.registry.EVALUATORS, the key-set test against the models union, and the evaluators for tool_called and tool_not_called with Evidence lists and Capture wording in messages."
+verify = "tool_called passes with Evidence of every matching seq and fails listing distinct called tools; tool_not_called fails with Evidence and its message states the Capture declaration; both error on an empty Trace."
+covers = ["R3"]
+after = [1]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 4
+type = "story"
+title = "tool_call_count and tool_order evaluators"
+description = "Adds the count evaluator with equals, greater_than, less_than and the order evaluator with first-occurrence semantics and intervening Events allowed, each with the four required tests."
+verify = "The Trace [delete_file, confirm_with_user, delete_file] fails the order [confirm_with_user, delete_file]; less_than messages state the Capture declaration; a listed tool never called is an error."
+covers = ["R3"]
+after = [3]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 5
+type = "story"
+title = "tool_arguments_match and final_output_contains evaluators"
+description = "Adds dotted-path argument matching by JSON value with numeric equality and the absent-path failure, and substring matching on text or the compact Canonical form of structured Final Output with the case_sensitive option."
+verify = "items.0.amount matches 5000 and not \"5000\"; a missing path fails naming it; a never-called tool errors; structured output matches its compact form and not its pretty form; no agent_finished event errors."
+covers = ["R3"]
+after = [3, 4]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 6
+type = "story"
+title = "Adapter protocol, Fixture Agent, adapter resolution, and conformance check"
+description = "Adds adapters.protocol with Adapter and RunContext, adapters.fixture reading scenario.trace relative to suite_dir and raising TraceMissingError, adapters.resolve for fixture, entry points, and dotted paths, and testing.adapter_conformance.check."
+verify = "The Fixture Agent returns the example Trace for a Scenario and raises TraceMissingError without one; resolve finds a dotted-path test adapter; the conformance check passes the fixture and fails an adapter returning a seq gap."
+covers = ["R4"]
+after = [2, "3.6"]
+hitl = false
+risk = "high"
+references = ["_bmad-output/initiative-agentproof-mvp/architecture-agentproof/architecture-agentproof.md#ad-9--adapter-protocol-and-the-runner-as-sole-owner-of-run-identity"]
+
+[[entry]]
+id = 7
+type = "story"
+title = "Runner pipeline and the run command"
+description = "Adds runner.run_suite with identity generation and overwrite, deterministic fixture identity, TraceMissingError and exception handling, sequential execution, an identity redaction placeholder, and the run SUITE_PATH [--adapter] [--output DIR] command printing the summary."
+verify = "run on the example exits 1 naming tool_not_called-0 with Evidence [1] and identical output twice; a skipped Scenario never invokes the adapter; an adapter that raises yields exit 3 while the other Scenarios still report."
+covers = ["R5", "R6"]
+after = [1, 4, 5, 6, "3.5", "3.6"]
+hitl = false
+risk = "high"
+references = ["_bmad-output/initiative-agentproof-mvp/architecture-agentproof/architecture-agentproof.md#ad-13--one-pipeline-one-report-builder-one-writer"]
+
+[[entry]]
+id = 8
+type = "story"
+title = "Exit-code matrix, public API, and the evaluation performance bound"
+description = "Adds the subprocess integration test reaching exit codes 0 to 4 including fault injection, agentproof.__all__ with the names that now exist, the CLI-imports-only-public-API test, and the 10,000-Event timing test."
+verify = "The matrix test passes on Linux and Windows CI; importing agentproof imports no framework SDK; the timing test completes under two seconds on the CI runner."
+covers = ["R6", "R7", "R8"]
+after = [7]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 9
+type = "story"
+title = "Refactor sweep"
+description = "Cleanup only, scoped at start from the plans and review findings of stories 1 to 8; no new behavior."
+verify = "uv run check stays green and the diff touches only what the sweep scope lists."
+covers = ["R1"]
+after = [1, 2, 3, 4, 5, 6, 7, 8]
+hitl = false
+risk = "low"

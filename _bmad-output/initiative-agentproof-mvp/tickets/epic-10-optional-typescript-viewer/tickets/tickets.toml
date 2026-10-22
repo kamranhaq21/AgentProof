@@ -1,0 +1,35 @@
+# Epic 10: Optional TypeScript viewer. Table order is build order. Every entry waits on the gate.
+
+[[entry]]
+id = 1
+type = "spike"
+title = "Decide whether the viewer starts in v0.1"
+description = "Answers, from the HTML Report's adequacy after epic 6 and the maintainer's capacity, whether to build the viewer now or keep it deferred to v0.3; the answer goes to this epic's Notes as a dated Decision and, if building, its Requirements are written."
+verify = "The epic file carries a dated Decision line and, if building, refined is true with Requirements."
+covers = []
+after = ["6.4"]
+hitl = true
+risk = "low"
+unknown = "Build the viewer in v0.1, or keep it deferred to v0.3 as the PRD states? The maintainer decides after epic 6."
+
+[[entry]]
+id = 2
+type = "story"
+title = "Viewer scaffold under packages/viewer"
+description = "Creates the React, Vite, TypeScript strict scaffold with Vitest and ESLint, Node LTS pinned, wired into the check entry point, loading a report.json from disk with no network request."
+verify = "The viewer builds statically, opens report.json from the example run, and the browser's network panel shows no requests after load."
+covers = []
+after = [1]
+hitl = true
+risk = "low"
+
+[[entry]]
+id = 3
+type = "story"
+title = "Report screens with text-only rendering and pagination"
+description = "Adds summary, Scenario list, Assertion results, Event timeline, Event details, and Comparison views rendering every value as text, with keyboard navigation, pagination for large Reports, and empty and error states."
+verify = "A Report with a script tag in a tool argument shows it as text; a 10,000-Event Report pages; an invalid file shows the error state."
+covers = []
+after = [2]
+hitl = false
+risk = "medium"
