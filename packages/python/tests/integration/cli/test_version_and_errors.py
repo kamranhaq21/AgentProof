@@ -8,6 +8,7 @@ module is one of the few allowed to spawn a process (AD-17).
 """
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -23,6 +24,11 @@ SUBPROCESS_TIMEOUT_SECONDS = 120
 
 TESTING = "AGENTPROOF_TESTING"
 FAULT_INJECT = "AGENTPROOF_FAULT_INJECT"
+
+
+def _strip_ansi(text: str) -> str:
+    """CI sets GITHUB_ACTIONS, which makes Rich style even piped output."""
+    return re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", text)
 
 
 def _console_script() -> str:
@@ -73,9 +79,10 @@ def test_version_prints_the_version_and_schema_versions_and_exits_0() -> None:
 def test_help_lists_version_and_the_global_options_and_exits_0() -> None:
     result = _run("--help")
     assert result.returncode == 0, result.stderr
-    assert "version" in result.stdout
-    assert "--verbose" in result.stdout
-    assert "--no-color" in result.stdout
+    help_text = _strip_ansi(result.stdout)
+    assert "version" in help_text
+    assert "--verbose" in help_text
+    assert "--no-color" in help_text
 
 
 def test_no_color_version_has_no_escape_sequence() -> None:
@@ -88,7 +95,7 @@ def test_an_unknown_command_is_a_usage_error_with_exit_2_and_no_traceback() -> N
     result = _run("validate", "x.yaml")
     assert result.returncode == 2
     assert "Traceback" not in result.stderr
-    assert "validate" in result.stderr
+    assert "validate" in _strip_ansi(result.stderr)
 
 
 @pytest.mark.parametrize("option", ["--verbose", "--no-color"])

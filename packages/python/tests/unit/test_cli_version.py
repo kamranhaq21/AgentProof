@@ -1,5 +1,7 @@
 """The ``version`` command and the root help in-process (story 3.1 criterion 4)."""
 
+import re
+
 from typer.main import get_command
 from typer.testing import CliRunner
 
@@ -9,6 +11,15 @@ from agentproof.cli.commands.version import format_version
 from agentproof.constants import SUPPORTED_VERSIONS
 
 runner = CliRunner()
+
+_ANSI = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
+
+
+def _strip_ansi(text: str) -> str:
+    """CI sets GITHUB_ACTIONS, which makes Rich emit styling even into captured output, so
+    help-text assertions look at the text with the escape sequences removed."""
+    return _ANSI.sub("", text)
+
 
 EXPECTED_LINES = [
     f"agentproof {agentproof.__version__}",
@@ -43,14 +54,15 @@ def test_help_lists_only_version_command() -> None:
     # CommandInfo.name is None until Typer derives it from the function name while
     # building the Click group, so assert on the built group's command set.
     assert list(get_command(app).commands) == ["version"]
-    assert "version" in result.stdout
+    assert "version" in _strip_ansi(result.stdout)
 
 
 def test_help_lists_the_two_global_options() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    assert "--verbose" in result.stdout
-    assert "--no-color" in result.stdout
+    help_text = _strip_ansi(result.stdout)
+    assert "--verbose" in help_text
+    assert "--no-color" in help_text
     assert runner.invoke(app, ["--verbose", "--no-color", "version"]).exit_code == 0
 
 
@@ -60,12 +72,19 @@ def test_global_options_after_the_command_are_a_usage_error_today() -> None:
     for option in ("--verbose", "--no-color"):
         result = runner.invoke(app, ["version", option])
         assert result.exit_code == 2, option
-        assert "No such option" in result.output
+        assert "No such option" in _strip_ansi(result.output)
         assert "Traceback" not in result.output
 
 
 def test_version_help_documents_the_output_and_exit_code() -> None:
     result = runner.invoke(app, ["version", "--help"])
     assert result.exit_code == 0
-    assert "schema versions" in result.stdout
-    assert "Exit code: 0" in result.stdout
+    help_text = _strip_ansi(result.stdout)
+    assert "schema versions" in help_text
+    assert "Exit code: 0" in help_text
+
+
+def test_version_short_help_is_short_enough_never_to_wrap_in_the_command_list() -> None:
+    """The first docstring line is the command-list description; keep it under 60 chars."""
+    summary = get_command(app).commands["version"].get_short_help_str(limit=1000)
+    assert len(summary) < 60, summary

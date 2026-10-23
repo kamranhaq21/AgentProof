@@ -43,8 +43,9 @@ def format_version(package_version: str, supported_versions: Mapping[str, tuple[
 
 
 def version() -> None:
-    """Print the package version and the supported Suite, Trace, and Report schema versions.
+    """Print the version and the supported schema versions.
 
+    Prints the package version and the supported Suite, Trace, and Report schema versions.
     Output, one item per line: "agentproof <version>", then "suite schema versions: ...",
     "trace schema versions: ...", "report schema versions: ...". Exit code: 0.
     """
