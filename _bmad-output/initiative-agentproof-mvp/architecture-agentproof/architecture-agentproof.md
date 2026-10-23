@@ -395,7 +395,9 @@ Results and Report (`version: 1`), JSON:
       "execution_error": null,
       "counts": {"passed": 2, "failed": 1, "error": 0, "skipped": 0},
       "assertions": [
-        {"assertion_id": "tool_not_called-0", "type": "tool_not_called", "status": "failed", "message": "approve_expense was called (capture: complete)", "evidence": [1], "detail": {}}
+        {"assertion_id": "tool_not_called-0", "type": "tool_not_called", "status": "failed", "message": "approve_expense was called (capture: complete)", "evidence": [1], "detail": {}},
+        {"assertion_id": "tool_call_count-1", "type": "tool_call_count", "status": "passed", "message": "reject_expense was called 1 time (equals 1)", "evidence": [1], "detail": {}},
+        {"assertion_id": "says-rejected", "type": "final_output_contains", "status": "passed", "message": "final output contains \"rejected\"", "evidence": [3], "detail": {}}
       ],
       "trace": { "…the redacted Trace, or null when absent…" },
       "cost": null

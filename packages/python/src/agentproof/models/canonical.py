@@ -49,6 +49,7 @@ VOLATILE_PATHS: Final[tuple[str, ...]] = (
     "scenarios[*].trace.environment",
     "scenarios[*].trace.events[*].timestamp",
     "scenarios[*].trace.events[*].duration_ms",
+    "scenarios[*].duration_ms",
     "scenarios[*].cost",
 )
 """Report fields that differ between runs of the same Suite, as path patterns rooted at
