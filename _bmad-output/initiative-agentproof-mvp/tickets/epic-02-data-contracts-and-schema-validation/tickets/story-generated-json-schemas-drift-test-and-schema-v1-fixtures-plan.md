@@ -3,7 +3,7 @@ title: 'Generated JSON Schemas, drift test, and schema v1 fixtures'
 type: 'feature'
 ticket: '5'
 created: '2026-10-23'
-status: 'built'
+status: done
 baseline_revision: 'fca6286427e55f823cb7560090bf0c6a491eecc5'
 route: 'full'
 route_source: 'pinned'
