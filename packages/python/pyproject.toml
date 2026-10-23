@@ -34,6 +34,7 @@ dev = [
     # Workspace member providing `uv run check` (story 1.2, ARCH-4). A dev
     # dependency only; it is never part of the shipped `agentproof` wheel.
     "agentproof-devtools",
+    "hypothesis>=6.170",
 ]
 
 [tool.uv.workspace]
