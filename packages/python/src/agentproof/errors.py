@@ -33,8 +33,12 @@ class Violation:
     """One thing wrong with an input: where it came from, which field, and why.
 
     ``source`` is the label the shell attached to the text (a file path or ``<stdin>``),
-    ``field`` the dotted path inside it (``scenarios.2.id``; empty for the whole
-    document), and ``message`` one plain sentence. The CLI prints each violation as
+    ``field`` where inside it, and ``message`` one plain sentence. ``field`` is one of
+    three things: a 1-based ``line:column`` position in the text (it fully matches
+    ``\\d+:\\d+``; set by the YAML loader for faults found before the document is a
+    model), the dotted model path (``scenarios.2.id``, list indexes 0-based; set by
+    model validation), or empty for the whole document. A text-level fault never has a
+    path and a validation fault never has a position. The CLI prints each violation as
     ``<kind>: <message> (<source>:<field>)``.
     """
 
