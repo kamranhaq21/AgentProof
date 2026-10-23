@@ -28,11 +28,12 @@ on:
 permissions:
   contents: read
 
-# One run per ref: a new push to the same branch or pull request cancels the run it
-# supersedes, so the queue never holds results nobody will read.
+# One run per ref. On a pull request a new push cancels the run it supersedes, so the
+# queue never holds results nobody will read; on `main` and `backlog` every push keeps
+# its run, so each merge commit has a completed result (retrospective epic 1, finding 8).
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check:
@@ -41,6 +42,7 @@ jobs:
     # template changes those contexts; update the protection rule in the same change.
     name: check (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     strategy:
       # Every cell reports: a failure on one runner or version never hides another.
       fail-fast: false
@@ -49,6 +51,8 @@ jobs:
         python: ["3.12", "3.13", "3.14", "3.15"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # uv installs Python itself (`python-version` sets UV_PYTHON); no actions/setup-python.
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
@@ -72,8 +76,11 @@ jobs:
     # Builds the wheel once and hands it to `smoke` as a run artifact, so the install
     # proof runs against the exact bytes a release would ship, never a rebuild.
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
@@ -97,6 +104,7 @@ jobs:
     name: smoke (${{ matrix.os }})
     needs: wheel
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -105,6 +113,8 @@ jobs:
       # The checkout is read only for the expected version in pyproject.toml; nothing
       # from the source tree is installed.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
@@ -140,8 +150,11 @@ jobs:
     # requirement, so a broken export never passes as "nothing found". pip-audit itself
     # is pinned like every other tool here; bump the version deliberately.
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:

@@ -8,8 +8,8 @@ baseline_revision: '05ed167eb483c088cb22a7f48c4bf75e750d4d57'
 route: 'full'
 route_source: 'pinned'
 risk: 'low'
-review: 'quick'
-review_source: 'pinned'
+review: 'none'
+review_source: 'orchestrator'
 ---
 
 # Refactor sweep
@@ -65,6 +65,9 @@ Cleanup only, scoped from what the plans and reviews of stories 1.1 to 1.6 defer
 2026-10-23. Items 1 to 3 applied as scoped. `uv run check`: ruff clean, 36 files formatted, mypy clean (18 files), Contracts: 7 kept, 0 broken, `250 passed` (was 249), exit 0. Red check: with the sdist exclude stashed, the new test fails on `devtools` and `tests` members; with it restored, passes. Diff touches only the Code Map.
 
 ## Plan Change Log
+
+- 2026-10-23: `review` corrected from `quick` to `none`. No review lens ran on this sweep;
+  the orchestrator read the diff and the CI results (retrospective epic 1, finding 10).
 
 ## Review Triage Log
 

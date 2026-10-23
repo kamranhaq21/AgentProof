@@ -114,9 +114,12 @@ def test_contributing_states_the_check_command_and_policies() -> None:
     assert "SECURITY.md" in text
 
 
-def test_security_policy_names_a_reporting_channel_placeholder() -> None:
+def test_security_policy_names_a_reporting_channel() -> None:
+    """Either the maintainer's placeholder or a real private channel: never neither."""
     text = (REPOSITORY_ROOT / "SECURITY.md").read_text(encoding="utf-8")
-    assert "<security contact to be filled by the maintainer>" in text
+    placeholder = "<security contact to be filled by the maintainer>" in text
+    contact = re.search(r"[\w.+-]+@[\w-]+\.[\w.-]+|https://\S+", text) is not None
+    assert placeholder or contact, "SECURITY.md names no reporting channel"
 
 
 def _locked_ruff_version() -> str:
