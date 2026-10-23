@@ -3,7 +3,7 @@ title: 'Trace, event, capture, redaction-state, and environment models'
 type: 'feature'
 ticket: '3'
 created: '2026-10-23'
-status: 'built'
+status: done
 baseline_revision: '05ed167eb483c088cb22a7f48c4bf75e750d4d57'
 route: 'full'
 route_source: 'pinned'
