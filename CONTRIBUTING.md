@@ -38,13 +38,15 @@ as a fast pre-commit subset of the gate. They never replace `uv run check`.
 
 The rules come from `PROJECT_SPEC.md` section 13.2:
 
-- `main` stays releasable at all times. It is protected: nothing lands on it except
-  through a pull request, and the pull request merges only when the CI workflow's eight
-  `check` jobs (two runners by four Python versions) are green. The rule requires no
-  approvals and is not enforced on administrators, so the solo maintainer is never
-  locked out, but the CI check is never skipped.
+- `main` stays releasable at all times. It is protected: changes land through a pull
+  request that merges only when the CI workflow's eight `check` jobs (two runners by
+  four Python versions) are green. The rule requires no approvals and is not enforced
+  on administrators, so the repository administrator can bypass it in an emergency; for
+  everyone else the CI check cannot be skipped.
 - `backlog` is the integration branch. Story branches (`story/<n>-<slug>`) open their
   pull request against `backlog`; `backlog` lands on `main` through a pull request.
+  (The protection details and the `backlog` convention come from the maintainer's
+  2026-10-22 decisions recorded in the planning tickets, not from the spec.)
 - Work on short-lived feature branches.
 - Open a pull request even when working alone; the PR is the review history.
 - Keep commits small and descriptive.

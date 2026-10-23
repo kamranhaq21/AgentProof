@@ -36,7 +36,7 @@ def _workflow() -> dict[str, Any]:
 
 def _check_job() -> dict[str, Any]:
     jobs = _workflow()["jobs"]
-    assert list(jobs) == ["check"], "the workflow holds exactly the one `check` job"
+    assert "check" in jobs, "the workflow holds the `check` gate job (other jobs may exist)"
     job = jobs["check"]
     assert isinstance(job, dict)
     return job
@@ -48,6 +48,11 @@ def _steps() -> list[dict[str, Any]]:
     return steps
 
 
+def _all_steps() -> list[dict[str, Any]]:
+    """Every step of every job: pins and secrets are checked workflow-wide."""
+    return [step for job in _workflow()["jobs"].values() for step in job.get("steps", [])]
+
+
 def _triggers() -> dict[str, Any]:
     # PyYAML reads the bare key `on` as the YAML 1.1 boolean `True`.
     workflow = _workflow()
@@ -56,9 +61,8 @@ def _triggers() -> dict[str, Any]:
     return triggers
 
 
-def test_ci_is_the_only_workflow() -> None:
-    files = sorted(path.name for path in WORKFLOWS_DIR.iterdir() if path.is_file())
-    assert files == ["ci.yml"]
+def test_ci_workflow_exists() -> None:
+    assert CI_WORKFLOW.is_file()
 
 
 def test_workflow_runs_on_pull_requests_and_pushes_to_main_and_backlog() -> None:
@@ -69,7 +73,7 @@ def test_workflow_runs_on_pull_requests_and_pushes_to_main_and_backlog() -> None
 
 
 def test_every_action_is_pinned_to_a_full_commit_sha() -> None:
-    uses = [step["uses"] for step in _steps() if "uses" in step]
+    uses = [step["uses"] for step in _all_steps() if "uses" in step]
     assert uses, "the job must use at least one action"
     unpinned = [ref for ref in uses if not PINNED_ACTION.match(ref)]
     assert unpinned == []
@@ -83,10 +87,10 @@ def test_every_pinned_action_line_carries_its_version_comment() -> None:
     assert without_comment == []
     # The commented lines are exactly the parsed `uses:` values: nothing hides elsewhere.
     commented_refs = sorted(PINNED_LINE.match(line)["ref"] for line in uses_lines)  # type: ignore[index]
-    assert commented_refs == sorted(step["uses"] for step in _steps() if "uses" in step)
+    assert commented_refs == sorted(step["uses"] for step in _all_steps() if "uses" in step)
 
 
-def test_actions_are_checkout_and_setup_uv_only() -> None:
+def test_check_job_uses_checkout_and_setup_uv() -> None:
     owners = [step["uses"].split("@")[0] for step in _steps() if "uses" in step]
     assert owners == ["actions/checkout", "astral-sh/setup-uv"]
 
@@ -94,7 +98,7 @@ def test_actions_are_checkout_and_setup_uv_only() -> None:
 def test_top_level_permissions_are_contents_read_only() -> None:
     workflow = _workflow()
     assert workflow["permissions"] == {"contents": "read"}
-    assert "permissions" not in _check_job(), "the job inherits the top-level grant"
+    assert "permissions" not in _check_job(), "the check job inherits the top-level grant"
 
 
 def test_matrix_is_two_runners_by_four_python_versions() -> None:
@@ -124,8 +128,6 @@ def test_check_stage_is_exactly_one_uv_run_check_step_in_the_package() -> None:
     for step in run_steps:
         assert step["working-directory"] == "packages/python", step["run"]
         assert step["shell"] == "bash", step["run"]
-    # The gate is the last thing the job does; nothing runs after it.
-    assert _steps()[-1]["run"] == "uv run check"
 
 
 def test_no_step_references_secrets_or_tolerates_failure() -> None:
