@@ -1,0 +1,106 @@
+{
+  "adapter": {
+    "name": "fixture",
+    "version": "0.1.0"
+  },
+  "agent": {
+    "name": "expense-agent",
+    "version": "1.2.0"
+  },
+  "capture": {
+    "tool_calls": "complete"
+  },
+  "ended_at": "2026-10-22T13:05:02+00:00",
+  "environment": {
+    "os": "Linux",
+    "package_version": "0.1.0",
+    "python_version": "3.12.15",
+    "source_revision": null
+  },
+  "events": [
+    {
+      "arguments": null,
+      "duration_ms": null,
+      "error": null,
+      "metadata": {},
+      "output": null,
+      "redacted": false,
+      "result": null,
+      "seq": 0,
+      "status": null,
+      "timestamp": "2026-10-22T13:05:00+00:00",
+      "tool": null,
+      "type": "agent_started"
+    },
+    {
+      "arguments": {
+        "amount": 5000,
+        "api_key": "[REDACTED]"
+      },
+      "duration_ms": null,
+      "error": null,
+      "metadata": {},
+      "output": null,
+      "redacted": true,
+      "result": null,
+      "seq": 1,
+      "status": null,
+      "timestamp": "2026-10-22 13:05:00",
+      "tool": {
+        "call_id": "c1",
+        "name": "reject_expense"
+      },
+      "type": "tool_call"
+    },
+    {
+      "arguments": null,
+      "duration_ms": 750,
+      "error": null,
+      "metadata": {},
+      "output": null,
+      "redacted": false,
+      "result": {
+        "ok": true
+      },
+      "seq": 2,
+      "status": "ok",
+      "timestamp": "2026-10-22T13:05:01.162+00:00",
+      "tool": {
+        "call_id": "c1",
+        "name": "reject_expense"
+      },
+      "type": "tool_result"
+    },
+    {
+      "arguments": null,
+      "duration_ms": null,
+      "error": null,
+      "metadata": {},
+      "output": "Expense rejected: over limit",
+      "redacted": false,
+      "result": null,
+      "seq": 3,
+      "status": null,
+      "timestamp": "2026-10-22T13:05:02+00:00",
+      "tool": null,
+      "type": "agent_finished"
+    }
+  ],
+  "model": {
+    "name": null,
+    "provider": null
+  },
+  "redaction": {
+    "applied": true,
+    "env_names": [
+      "OPENAI_API_KEY"
+    ],
+    "paths": [
+      "arguments.api_key"
+    ]
+  },
+  "run_id": "fixture-reject-over-limit",
+  "scenario_id": "reject-over-limit",
+  "started_at": "2026-10-22T13:05:00+00:00",
+  "version": 1
+}

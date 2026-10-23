@@ -26,6 +26,11 @@ dev = [
     "ruff>=0.17",
     "mypy>=2.4",
     "import-linter>=2.15",
+    # Validate the fixtures against the generated JSON Schemas in tests (story 2.5,
+    # AD-4). Dev only: the product validates with Pydantic and never imports these
+    # (AD-16); tests/unit/test_schema_drift.py proves it.
+    "jsonschema>=4.26",
+    "referencing>=0.36",
     # Workspace member providing `uv run check` (story 1.2, ARCH-4). A dev
     # dependency only; it is never part of the shipped `agentproof` wheel.
     "agentproof-devtools",

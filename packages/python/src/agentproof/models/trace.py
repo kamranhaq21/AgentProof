@@ -69,6 +69,7 @@ __all__ = [
     "EventType",
     "ModelInfo",
     "RedactionState",
+    "TIMESTAMP_PATTERN",
     "Timestamp",
     "ToolRef",
     "Trace",
@@ -213,7 +214,19 @@ TraceSchemaVersion = Annotated[
 ]
 """An exact integer that ``SUPPORTED_VERSIONS["trace"]`` lists (AD-3)."""
 
-Timestamp = Annotated[str, BeforeValidator(_require_timestamp)]
+TIMESTAMP_PATTERN: Final = f"^{RFC3339_WITH_OFFSET.pattern}$"
+"""The timestamp grammar as a JSON Schema ``pattern`` (AD-4): ``RFC3339_WITH_OFFSET``
+anchored at both ends, so an external validator rejects the naive timestamps the model
+rejects. The grammar uses only ``[0-9]``, counted repeats, groups, ``?`` and ``|``, which
+ECMA-262 and Python read alike. Exported through ``json_schema_extra`` rather than
+``Field(pattern=...)`` so pydantic-core runs no second regex and the error code stays
+``timestamp_format``."""
+
+Timestamp = Annotated[
+    str,
+    BeforeValidator(_require_timestamp),
+    Field(json_schema_extra={"pattern": TIMESTAMP_PATTERN}),
+]
 """An RFC 3339 string with an explicit offset or ``Z``, stored exactly as given (AD-3)."""
 
 # ``Field(ge=0)`` sits before the validator so the constraint lands on the integer schema

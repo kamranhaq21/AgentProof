@@ -1,0 +1,15 @@
+{
+  "adapter": {
+    "name": "fixture",
+    "version": "0.1.0"
+  },
+  "agent": {
+    "name": "agent"
+  },
+  "ended_at": "2026-10-22T13:05:00Z",
+  "events": [],
+  "run_id": "run-1",
+  "scenario_id": "only",
+  "started_at": "2026-10-22T13:05:00Z",
+  "version": 1
+}
