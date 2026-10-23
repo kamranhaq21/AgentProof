@@ -7,6 +7,8 @@ handler is exercised exactly as ``cli/app.py`` uses it without adding commands t
 shipped app.
 """
 
+from collections.abc import Iterator
+
 import pytest
 import typer
 from typer.testing import CliRunner
@@ -19,8 +21,18 @@ from agentproof.errors import (
     TraceMissingError,
     Violation,
 )
+from agentproof.io import console
 
 runner = CliRunner()
+
+
+@pytest.fixture(autouse=True)
+def _reset_console() -> Iterator[None]:
+    """Tests plant secrets and the root callback installs a stderr handler; undo both."""
+    yield
+    console.uninstall()
+    assert console.secret_values() == ()
+
 
 SECRET = "sk-live-planted-secret-value"
 
@@ -73,14 +85,17 @@ def fine() -> None:
 
 
 def leaks_in_execution_error() -> None:
+    console.set_secret_values([SECRET])  # what the runner does once it resolves redact.env
     raise TraceMissingError(f"adapter failed with token {SECRET}")
 
 
 def leaks_in_internal_error() -> None:
+    console.set_secret_values([SECRET])
     raise RuntimeError(f"connection to host failed with token {SECRET}")
 
 
 def leaks_in_violation() -> None:
+    console.set_secret_values([SECRET])
     raise SuiteError([Violation(source="suite.yaml", field="x", message=f"bad value {SECRET}")])
 
 
@@ -226,13 +241,8 @@ def test_options_live_on_the_context_and_never_leak_between_invocations() -> Non
     assert "Traceback" not in runner.invoke(handled_app, ["boom"]).stderr
 
 
-# Story 3.5 installs scrub_text on every print (io.console). Until then the handler prints
-# the exception's own text, the traceback, and violation messages as they are; these strict
-# xfails pin that gap so the day 3.5 closes it they fail and must be flipped to plain tests.
-SCRUB_GAP = "story 3.5: io.console scrub_text is not installed on the CLI's output yet"
-
-
-@pytest.mark.xfail(strict=True, reason=SCRUB_GAP)
+# Story 3.5 closed the gap story 3.1 pinned with strict xfails: the handler prints through
+# io.console, which scrubs the exception text, the traceback, and violation messages.
 @pytest.mark.parametrize(
     "argv",
     [
@@ -245,4 +255,6 @@ SCRUB_GAP = "story 3.5: io.console scrub_text is not installed on the CLI's outp
 )
 def test_a_planted_secret_never_reaches_the_output(argv: list[str]) -> None:
     result = runner.invoke(handled_app, argv)
+    assert result.exit_code != 0
     assert SECRET not in result.output
+    assert "[REDACTED]" in result.stderr

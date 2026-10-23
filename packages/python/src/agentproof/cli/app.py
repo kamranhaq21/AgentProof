@@ -22,10 +22,9 @@ and ``agentproof version --verbose`` is a usage error (exit 2), as in any Typer 
 group. The root callback stores them as a ``GlobalOptions`` on ``ctx.obj``; the handler
 reads them from the context, so no state outlives one invocation.
 
-Known gap (story 3.5): the text printed for exit 3 and 4, the tracebacks, and the
-violation messages are not yet scrubbed for secret values; ``io.console`` adds
-``scrub_text`` on every print. ``tests/unit/cli/test_error_handler.py`` pins the gap
-with strict ``xfail`` tests.
+Every line the handler prints goes through ``io.console``, which replaces the declared
+secret values (story 3.5); the root callback installs the console scrubber and the
+logging filter.
 """
 
 import functools
@@ -45,6 +44,7 @@ from agentproof.cli.exit_codes import (
     EXIT_INTERNAL_ERROR,
 )
 from agentproof.errors import ExecutionError, InputError, Violation
+from agentproof.io import console
 
 __all__ = ["GlobalOptions", "app", "main"]
 
@@ -66,8 +66,8 @@ class GlobalOptions:
 
 
 def _echo_error(text: str, options: GlobalOptions) -> None:
-    """Write ``text`` and a newline to stderr, uncolored under ``--no-color``."""
-    typer.echo(text, err=True, color=False if options.no_color else None)
+    """Write ``text`` and a newline to stderr, scrubbed of secrets (plain under ``--no-color``)."""
+    console.echo(text, err=True, no_color=options.no_color)
 
 
 def _violation_line(kind: str, violation: Violation) -> str:
@@ -181,6 +181,10 @@ def _root(
     # Also keeps ``app`` a command group: without a callback Typer collapses a
     # single-command app into that command.
     context.obj = GlobalOptions(verbose=verbose, no_color=no_color)
+    # Installs the scrubber and logging filter before any command reads a Trace. The secret
+    # set is EMPTY here, so in the shipped CLI scrubbing is a no-op until epic 5's runner
+    # calls ``console.set_secret_values``; only the wiring is live today.
+    console.install((), verbose=verbose)
 
 
 app.command("version")(_handled(version))

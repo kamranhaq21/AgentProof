@@ -39,6 +39,16 @@
 - source: story 3.1 review, 2026-10-23
   summary: the CLI error handler prints `str(exc)` for exit 3 and 4, the traceback under `--verbose`, and unwrapped violation messages without running `scrub_text`, so a secret value inside an exception message reaches stderr. Strict `xfail` tests (`test_a_planted_secret_never_reaches_the_output` in `tests/unit/cli/test_error_handler.py`) pin the gap; when `io.console` scrubs every print they XPASS and fail, and must be flipped to plain tests.
   owner: story 3.5 (console scrubber and logging filter).
+  status: closed 2026-10-23 by story 3.5: `_echo_error` prints through `io.console.echo`, which scrubs the final text; the xfail marks are removed and the five cases pass (the commands call `console.set_secret_values`, as the epic 5 runner will).
+- source: story 3.5 review, 2026-10-23
+  summary: `scrub_text` matches the secret's literal text only. A secret that appears in an escaped or encoded form (inside a `repr()`ed exception message, `json.dumps` output with escapes, unicode-escape, a multi-line value with `\n` escaped) is not matched and can leak.
+  owner: a future story once real secrets exist (epic 5, the runner resolving `redact.env`); needs a concrete repro from a real value. Consider also scrubbing the `repr`/`json.dumps` forms of each value.
+- source: story 3.5 review, 2026-10-23
+  summary: the logging filter covers handlers on the root logger at `install()` time and the one handler `install()` owns. A handler added to the root later, a logger with `propagate=False` and its own handler, and attributes passed through `extra={}` bypass it.
+  owner: a future story, once a shell module actually logs; either install a `logging.setLogRecordFactory` scrubber or document the rule that shell code adds handlers only through `io.console`.
+- source: story 3.5 review, 2026-10-23
+  summary: Typer/click's own usage-error rendering (for example an unexpected-argument message) does not pass through `_echo_error`, so it is not scrubbed. Unreachable today since no command takes an argument from a source that could carry a secret.
+  owner: a future story that adds such a command; route click's `UsageError` display through `io.console.echo`.
 - source: story 3.2 (safe YAML loader), 2026-10-23
   summary: AGENTS.md's managed block still says "Parse YAML with yaml.safe_load only (the one SafeLoader subclass of ADR-019)"; the actual entry point is loading.yaml_safe.load, never yaml.safe_load directly. Reword to "Parse YAML only through agentproof.loading.yaml_safe.load (one SafeLoader subclass); never yaml.safe_load or yaml.load directly" at the next bmad-project-context refresh.
   owner: maintainer / next AGENTS.md refresh.
