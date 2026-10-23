@@ -813,9 +813,26 @@ def test_an_unexpected_parser_exception_is_still_an_input_fault_naming_only_its_
         raise KeyError("secret-token-in-the-document")
 
     monkeypatch.setattr(_StrictLoader, "get_single_node", boom)
-    violation = _only(_reject("a: 1\n"))
+    with pytest.raises(SuiteError) as excinfo:
+        load("a: 1\n", source=SOURCE)
+    exc = excinfo.value
+    violation = _only(exc)
     assert violation.message == "the document could not be parsed (KeyError)"
     assert "secret" not in violation.message
+    # The message never echoes the fault, but the original exception still survives
+    # as the traceback's cause, so a genuine PyYAML-internals bug stays debuggable.
+    assert isinstance(exc.__cause__, KeyError)
+    assert exc.__suppress_context__
+
+
+@pytest.mark.parametrize("escape", ["\\U0011FFFF", "\\UFFFFFFFF", "\\U00110000"])
+def test_the_unicode_escape_rejection_chains_the_original_exception(escape: str) -> None:
+    """The message stays input-free, but ``__cause__`` carries the real PyYAML fault."""
+    with pytest.raises(SuiteError) as excinfo:
+        load(f'a: "{escape}"\n', source=SOURCE)
+    exc = excinfo.value
+    assert isinstance(exc.__cause__, (ValueError, OverflowError))
+    assert exc.__suppress_context__
 
 
 # -- the node bound ----------------------------------------------------------------------

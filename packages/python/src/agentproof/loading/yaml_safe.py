@@ -15,7 +15,11 @@ refuses, before any object is constructed, what ``yaml.safe_load`` alone would a
 - a second document, with the line of its ``---`` (or, after an explicit ``...``, the
   line where the second document's content starts);
 - more than ``constants.MAX_YAML_NODES`` nodes, at the node that crosses the limit, which
-  bounds the time and memory an alias-free document can cost the pure-Python loader;
+  bounds the memory an alias-free document can cost the pure-Python loader (peak well
+  under 150 MB at the limit, measured); it does not bound wall time as tightly, since
+  composing up to the limit is itself linear work, roughly 10-30s at the 5 MB
+  ``MAX_SUITE_BYTES`` ceiling on ordinary hardware -- acceptable for a local CLI run with
+  no remote exposure, but not a hard real-time guarantee;
 - a duplicate mapping key at any depth, naming the key and the line of the second
   occurrence (PyYAML's silent last-wins merge is disabled), and a non-string key;
 - a string (key or value, however it was written) holding a lone surrogate, which cannot
@@ -463,19 +467,23 @@ def load(text: str, *, source: str) -> dict[str, JsonValue]:
         raise SuiteError([_from_yaml_error(exc, text, source)]) from exc
     except RecursionError:
         raise _unpositioned(source, "the document nests too deeply") from None
-    except (ValueError, OverflowError):
+    except (ValueError, OverflowError) as exc:
         # PyYAML's scanner calls ``chr()`` on ``\U`` escapes without a range check; above
         # U+10FFFF that is a ``ValueError``, and on CPython 3.12 a value that does not fit
-        # a C int (``\UFFFFFFFF``) is an ``OverflowError``.
+        # a C int (``\UFFFFFFFF``) is an ``OverflowError``. Chained with ``from exc``, not
+        # suppressed, so the original PyYAML frame survives in a traceback for debugging;
+        # the *message* we raise still never echoes the input text.
         raise _unpositioned(
             source, "the document has a character escape that is not a valid Unicode character"
-        ) from None
+        ) from exc
     except Exception as exc:
         # Defense in depth for an input that trips a PyYAML bug: still an input fault.
-        # Only the exception type is named, never its text, which may echo the input.
+        # Only the exception type is named in the message, never its text, which may
+        # echo the input; chained with ``from exc`` so the original traceback survives
+        # for debugging a genuine PyYAML-internals bug.
         raise _unpositioned(
             source, f"the document could not be parsed ({type(exc).__name__})"
-        ) from None
+        ) from exc
     violations = loader.recorded_violations()
     if violations:
         raise SuiteError(violations)
