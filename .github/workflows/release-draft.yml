@@ -1,0 +1,62 @@
+# Draft release on a version tag (story 1.6). Pushing a `v*` tag builds the sdist and
+# wheel from the tagged commit and attaches them to a *draft* GitHub release. A
+# maintainer still reviews and publishes that release by hand, and nothing here uploads
+# to a package index: publishing to PyPI is epic 9 story 5, and that story replaces this
+# workflow with the publish pipeline. Until then the only credential in play is the
+# job's automatic GITHUB_TOKEN, handed to the runner's preinstalled `gh` CLI; there is
+# no third-party release action to pin.
+#
+# Permissions are exactly `contents: write`, which creating the release and uploading
+# its assets needs, and nothing else. Every `uses:` is pinned to a full commit SHA with
+# the matching tag in a trailing comment; tests/unit/test_workflow_pins.py fails when
+# the trigger, the permissions, a pin's form, the version guard, or the draft flag drift
+# from this.
+name: Release draft
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  draft-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          python-version: "3.12"
+
+      # The tag must name the version pyproject.toml declares, so a release never carries
+      # another version's files.
+      - run: |
+          expected="$(tr -d '\r' < packages/python/pyproject.toml | sed -nE 's/^version = "([^"]*)"$/\1/p')"
+          echo "tag $GITHUB_REF_NAME, pyproject version '$expected'"
+          test -n "$expected" && test "${GITHUB_REF_NAME#v}" = "$expected"
+        shell: bash
+
+      # sdist and wheel, from the tagged commit, into packages/python/dist.
+      - run: uv build
+        working-directory: packages/python
+        shell: bash
+
+      # `--draft`: the release is created unpublished and stays so until a maintainer
+      # publishes it in the GitHub UI. `--generate-notes` drafts the notes from the pull
+      # requests merged since the previous tag. The tag already exists on the remote
+      # (its push triggered this run), so `gh` attaches the release to it as is. When a
+      # release for the tag already exists (one made in the GitHub UI, or a re-run), the
+      # files are uploaded to it instead, `--clobber` replacing same-named assets; nothing
+      # here publishes a draft.
+      - run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" --clobber packages/python/dist/*
+          else
+            gh release create "$GITHUB_REF_NAME" --draft --title "$GITHUB_REF_NAME" --generate-notes packages/python/dist/*
+          fi
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}

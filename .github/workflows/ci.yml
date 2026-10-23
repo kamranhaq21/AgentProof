@@ -4,9 +4,18 @@
 # same gate the maintainer runs locally (CONTRIBUTING.md, "The one check") on both
 # supported operating systems and every supported Python version.
 #
+# Story 1.6 adds the install path users will take, after the gate: `wheel` builds the
+# distributable wheel once, `smoke` installs that exact file into a fresh virtual
+# environment on each operating system and runs the installed CLI, and `audit` checks
+# the locked dependencies against known vulnerability advisories. Those three are
+# informative on pull requests; the protection rule on `main` requires the eight `check`
+# contexts only.
+#
 # Every `uses:` is pinned to a full commit SHA with the matching tag in a trailing
 # comment, and the workflow asks for read access only; tests/unit/test_workflow_pins.py
-# fails when a pin, the permissions, the matrix, or the check step drift from this.
+# fails when a pin loses its SHA form or its version comment, or when the permissions,
+# the matrix, or the check step drift from this. (That the SHA is the commit the tag
+# names is checked by hand against `gh api` when a pin is added, not by the test.)
 name: CI
 
 on:
@@ -56,5 +65,96 @@ jobs:
 
       # The check stage: exactly this one step, exactly this command.
       - run: uv run check
+        working-directory: packages/python
+        shell: bash
+
+  wheel:
+    # Builds the wheel once and hands it to `smoke` as a run artifact, so the install
+    # proof runs against the exact bytes a release would ship, never a rebuild.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          python-version: "3.12"
+
+      - run: uv build --wheel --out-dir dist
+        working-directory: packages/python
+        shell: bash
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wheel
+          path: packages/python/dist/*.whl
+          if-no-files-found: error
+
+  smoke:
+    # Installs the uploaded wheel by file path into a fresh virtual environment and runs
+    # the installed CLI. Never by name from an index: the distribution name is still
+    # provisional (docs/decisions/0000-distribution-name.md), and the point is to prove
+    # the file `wheel` built, not whatever an index would resolve.
+    name: smoke (${{ matrix.os }})
+    needs: wheel
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      # The checkout is read only for the expected version in pyproject.toml; nothing
+      # from the source tree is installed.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          python-version: "3.12"
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: wheel
+          path: dist
+
+      - run: uv venv .smoke
+        shell: bash
+
+      - run: uv pip install --python .smoke dist/*.whl
+        shell: bash
+
+      # The venv's own console script (`bin/agentproof` on Linux, `Scripts/agentproof.exe`
+      # on Windows) must print exactly the version pyproject.toml declares. Carriage
+      # returns are stripped on both sides: the Windows checkout normalises pyproject.toml
+      # to CRLF, and Python's piped stdout writes CRLF there too.
+      - run: |
+          expected="$(tr -d '\r' < packages/python/pyproject.toml | sed -nE 's/^version = "([^"]*)"$/\1/p')"
+          exe=.smoke/bin/agentproof
+          [ -x "$exe" ] || exe=.smoke/Scripts/agentproof.exe
+          actual="$("$exe" version | tr -d '\r')"
+          echo "agentproof version -> '$actual' (expected '$expected')"
+          test -n "$expected" && test "$actual" = "$expected"
+        shell: bash
+
+  audit:
+    # Audits every locked third-party dependency, runtime and dev, against the known
+    # vulnerability advisories. `--strict` also fails when pip-audit cannot resolve a
+    # requirement, so a broken export never passes as "nothing found". pip-audit itself
+    # is pinned like every other tool here; bump the version deliberately.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          python-version: "3.12"
+
+      # `--no-emit-project` leaves out `agentproof` itself and `--no-emit-workspace` the
+      # local `agentproof-devtools` member (otherwise exported as `-e ./devtools`, which
+      # pip-audit cannot install from a requirements file and which has nothing to
+      # audit). Every third-party pin keeps its hashes.
+      - run: uv export --locked --all-groups --no-emit-project --no-emit-workspace -o requirements.txt
+        working-directory: packages/python
+        shell: bash
+
+      - run: uvx pip-audit==2.10.1 --strict -r requirements.txt
         working-directory: packages/python
         shell: bash
