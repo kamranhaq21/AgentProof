@@ -1,0 +1,7 @@
+version: 1
+suite: expense-agent
+defaults: &shared
+  adapter: fixture
+scenarios:
+  - id: reject-over-limit
+    defaults: *shared

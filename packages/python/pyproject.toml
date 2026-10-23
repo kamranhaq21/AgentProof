@@ -26,6 +26,9 @@ dev = [
     "ruff>=0.17",
     "mypy>=2.4",
     "import-linter>=2.15",
+    # Type stubs for PyYAML so `mypy --strict` can check `loading.yaml_safe` (story 3.2);
+    # PyYAML ships none. A dev dependency only; never part of the shipped wheel.
+    "types-pyyaml>=6.0.12",
     # Workspace member providing `uv run check` (story 1.2, ARCH-4). A dev
     # dependency only; it is never part of the shipped `agentproof` wheel.
     "agentproof-devtools",
@@ -52,7 +55,11 @@ line-length = 100
 src = [".", "src", "devtools/src"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "TID"]
+# Architecture AD-19 (story 3.2, epic-1 retrospective finding 4): the flake8-bandit rules
+# for `exec` (S102), `pickle.loads` (S301), `marshal` (S302), `eval` (S307) and `yaml.load`
+# without the safe loader (S506) apply to every file, shell packages, devtools and tests
+# included; nothing under `src` may ignore them.
+select = ["E", "F", "I", "UP", "B", "TID", "S102", "S301", "S302", "S307", "S506"]
 
 # Architecture AD-1: core code never touches the clock, the environment, the network,
 # the filesystem, or concurrency. TID251 bans the importable names; the AST purity
@@ -72,12 +79,20 @@ select = ["E", "F", "I", "UP", "B", "TID"]
 "subprocess".msg = "core code never shells out (AD-1)"
 "threading".msg = "core code is single-threaded and pure (AD-1); concurrency belongs to the shell"
 "asyncio".msg = "core code is synchronous and pure (AD-1); concurrency belongs to the shell"
+# Architecture AD-19: the only deserializers are `loading.yaml_safe` and `json.loads`.
+"pickle".msg = "pickle deserializes arbitrary objects (AD-19); artifacts are JSON and YAML only"
+"marshal".msg = "marshal deserializes code objects (AD-19); artifacts are JSON and YAML only"
+"shelve".msg = "shelve is pickle-backed (AD-19); artifacts are JSON and YAML only"
 
 [tool.ruff.lint.per-file-ignores]
-# Effectful shell packages, the devtools workspace member, and tests may use the names.
+# Effectful shell packages, the devtools workspace member, and tests may use the AD-1
+# names. The AD-19 S rules above are not listed here for anything under `src`.
 "src/agentproof/{adapters,runner,io,cli,testing}/**" = ["TID251"]
 "devtools/**" = ["TID251"]
 "tests/**" = ["TID251"]
+# This test deliberately round-trips an `InputError` through `pickle.loads` to prove the
+# exception rebuilds from its `args` (story 2.1); it never unpickles input data.
+"tests/unit/test_errors_taxonomy.py" = ["S301"]
 
 [tool.mypy]
 strict = true

@@ -56,6 +56,12 @@ MAX_TRACE_BYTES: Final = 5 * 1024 * 1024
 MAX_REPORT_BYTES: Final = 5 * 1024 * 1024
 """Largest Report file the shell reads before parsing (AD-19; OQ-12: 5 MB)."""
 
+MAX_YAML_NODES: Final = 200_000
+"""Most YAML nodes (every scalar, sequence and mapping) one Suite document may hold
+(AD-19). A hand-written Suite of 100 Scenarios with 10 Assertions each is under 10,000
+nodes; this is twenty times that, and it bounds the time and memory the pure-Python
+loader can spend on a document that stays under ``MAX_SUITE_BYTES`` without aliases."""
+
 
 @dataclass(frozen=True)
 class Statements:
