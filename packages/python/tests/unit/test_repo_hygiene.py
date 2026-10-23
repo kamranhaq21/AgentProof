@@ -10,8 +10,8 @@ from pathlib import Path
 
 import yaml
 
-PACKAGE_ROOT = Path(__file__).resolve().parents[2]
-REPOSITORY_ROOT = PACKAGE_ROOT.parents[1]
+from testsupport import PACKAGE_ROOT, REPOSITORY_ROOT
+
 GOLDEN_DIR = PACKAGE_ROOT / "tests" / "golden"
 DECISIONS_DIR = REPOSITORY_ROOT / "docs" / "decisions"
 

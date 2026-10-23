@@ -17,9 +17,8 @@ from pathlib import Path
 import pytest
 
 from agentproof_devtools.purity import CORE_PACKAGES
+from testsupport import PACKAGE_ROOT, REPOSITORY_ROOT, run_captured
 
-PACKAGE_ROOT = Path(__file__).resolve().parents[2]
-REPOSITORY_ROOT = PACKAGE_ROOT.parents[1]
 PYPROJECT = PACKAGE_ROOT / "pyproject.toml"
 IMPORTLINTER = REPOSITORY_ROOT / ".importlinter"
 SUBPROCESS_TIMEOUT_SECONDS = 300
@@ -44,16 +43,7 @@ def _completed(
     argv: list[str], *, cwd: Path, extra_env: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
     env = {**os.environ, "NO_COLOR": "1", "PYTHONIOENCODING": "utf-8", **(extra_env or {})}
-    return subprocess.run(
-        argv,
-        cwd=cwd,
-        env=env,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=SUBPROCESS_TIMEOUT_SECONDS,
-        check=False,
-    )
+    return run_captured(argv, cwd=cwd, env=env, timeout=SUBPROCESS_TIMEOUT_SECONDS)
 
 
 @pytest.fixture

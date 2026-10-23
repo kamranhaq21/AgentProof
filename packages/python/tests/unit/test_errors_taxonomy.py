@@ -30,8 +30,8 @@ from agentproof.errors import (
     UnsupportedVersionError,
     Violation,
 )
+from testsupport import PACKAGE_ROOT
 
-PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_ROOT = PACKAGE_ROOT / "src" / "agentproof"
 ERRORS_MODULE = SOURCE_ROOT / "errors.py"
 

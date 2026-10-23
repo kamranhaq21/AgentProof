@@ -38,21 +38,15 @@ Runner = Callable[..., "subprocess.CompletedProcess[Any]"]
 
 @dataclass(frozen=True)
 class Step:
-    """One gate step: a display name, the argv lists to run in order, an optional skip test."""
+    """One gate step: a display name and the argv lists to run in order."""
 
     name: str
     commands: tuple[tuple[str, ...], ...]
-    skip_reason: Callable[[], str | None] | None = None
 
 
 def build_steps(repository_root: Path) -> list[Step]:
-    """Return the five gate steps; ``lint-imports`` is skipped until ``.importlinter`` exists."""
+    """Return the five gate steps; ``lint-imports`` uses the root ``.importlinter``."""
     import_linter_config = repository_root / ".importlinter"
-
-    def import_linter_skip_reason() -> str | None:
-        if import_linter_config.is_file():
-            return None
-        return "no .importlinter yet (story 1.3)"
 
     return [
         Step(
@@ -67,7 +61,6 @@ def build_steps(repository_root: Path) -> list[Step]:
         Step(
             "lint-imports",
             (("lint-imports", "--config", str(import_linter_config), "--no-cache"),),
-            skip_reason=import_linter_skip_reason,
         ),
         Step("pytest", (("pytest",),)),
     ]
@@ -81,16 +74,11 @@ def run_steps(
 ) -> int:
     """Run ``steps`` in order inside ``cwd``; return the first non-zero exit code, else 0.
 
-    A step whose ``skip_reason`` returns text is reported as skipped and not run. A
-    step's commands run in order and the step fails at its first non-zero command.
+    A step's commands run in order and the step fails at its first non-zero command.
     Each command's own output goes straight to the inherited stdout and stderr.
     """
     for step in steps:
         print(f"==> {step.name}", flush=True)
-        reason = step.skip_reason() if step.skip_reason is not None else None
-        if reason is not None:
-            print(f"skipped: {reason}", flush=True)
-            continue
         for argv in step.commands:
             completed = runner(list(argv), cwd=cwd)
             if completed.returncode != 0:

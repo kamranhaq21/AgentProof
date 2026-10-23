@@ -37,9 +37,9 @@ from typing import Annotated, Any, Self
 from pydantic import BaseModel, Field, ValidationError, model_validator
 from pydantic_core import InitErrorDetails, PydanticCustomError
 
-from agentproof.models.assertions import MODEL_CONFIG, Count
-from agentproof.models.common import JsonValue, Status
-from agentproof.models.trace import Trace, _null_means_absent
+from agentproof.models.assertions import Count
+from agentproof.models.common import MODEL_CONFIG, JsonValue, Status, _null_means_absent
+from agentproof.models.trace import Trace
 
 __all__ = [
     "AssertionResult",

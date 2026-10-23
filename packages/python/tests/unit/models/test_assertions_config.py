@@ -15,7 +15,6 @@ from agentproof.models.assertions import (
     ARGUMENT_PATH_PATTERN,
     ASSERTION_MODELS,
     ASSERTION_TYPES,
-    MODEL_CONFIG,
     OPERATORS,
     AssertionConfig,
     AssertionConfigBase,
@@ -27,6 +26,7 @@ from agentproof.models.assertions import (
     ToolNotCalled,
     ToolOrder,
 )
+from agentproof.models.common import MODEL_CONFIG
 
 ADAPTER: TypeAdapter[AssertionConfig] = TypeAdapter(AssertionConfig)
 

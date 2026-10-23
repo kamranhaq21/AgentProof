@@ -14,8 +14,8 @@ from typing import Any
 import pytest
 import yaml
 
-PACKAGE_ROOT = Path(__file__).resolve().parents[2]
-REPOSITORY_ROOT = PACKAGE_ROOT.parents[1]
+from testsupport import REPOSITORY_ROOT
+
 WORKFLOWS_DIR = REPOSITORY_ROOT / ".github" / "workflows"
 CI_WORKFLOW = WORKFLOWS_DIR / "ci.yml"
 RELEASE_WORKFLOW = WORKFLOWS_DIR / "release-draft.yml"
@@ -25,6 +25,11 @@ WORKFLOW_FILES = sorted(WORKFLOWS_DIR.glob("*.yml"))
 PINNED_ACTION = re.compile(r"^[\w.-]+/[\w.-]+@[0-9a-f]{40}$")
 # The raw line: the pinned reference followed by the tag it was resolved from.
 PINNED_LINE = re.compile(r"^\s*-?\s*uses:\s*(?P<ref>\S+)\s+# v\d+\.\d+\.\d+\s*$")
+
+# Both the `smoke` job and the release guard read the declared version through this one
+# script (story 2.7); neither inlines the extraction.
+VERSION_SCRIPT = REPOSITORY_ROOT / ".github" / "scripts" / "pyproject-version.sh"
+VERSION_EXTRACTION = 'expected="$(bash .github/scripts/pyproject-version.sh)"'
 
 # The maintainer's decision (story 1.6): these four, and no third-party release action.
 ALLOWED_ACTIONS = {
@@ -253,7 +258,7 @@ def test_smoke_job_installs_the_uploaded_wheel_by_path_on_both_runners() -> None
     assert "exe=.smoke/bin/agentproof\n" in verify
     assert '[ -x "$exe" ] || exe=.smoke/Scripts/agentproof.exe' in verify
     assert """actual="$("$exe" version | tr -d '\\r' | head -n1)\"""" in verify
-    assert "tr -d '\\r' < packages/python/pyproject.toml" in verify
+    assert VERSION_EXTRACTION in verify
     assert 'test -n "$expected" && test "$actual" = "agentproof $expected"' in verify
 
 
@@ -290,6 +295,7 @@ def test_release_workflow_drafts_a_release_with_gh_and_the_job_token() -> None:
     assert len(run_steps) == 3
     guard, build, create = run_steps
     # The tag names the declared version, or the job fails before building anything.
+    assert VERSION_EXTRACTION in guard["run"]
     assert 'test -n "$expected" && test "${GITHUB_REF_NAME#v}" = "$expected"' in guard["run"]
     assert "working-directory" not in guard
     assert build["run"] == "uv build"
@@ -305,6 +311,23 @@ def test_release_workflow_drafts_a_release_with_gh_and_the_job_token() -> None:
     assert 'gh release upload "$GITHUB_REF_NAME" --clobber packages/python/dist/*' in create["run"]
     assert "gh release edit" not in create["run"], "an existing release keeps its draft state"
     assert job["steps"][-1] is create, "creating the draft is the last step: nothing publishes"
+
+
+def test_version_extraction_lives_in_one_script_and_no_workflow_inlines_it() -> None:
+    script = VERSION_SCRIPT.read_bytes()
+    assert b"\r" not in script, "the script must be LF so bash runs it on every runner"
+    lines = script.decode("utf-8").splitlines()
+    assert lines[0] == "#!/usr/bin/env bash"
+    commands = [line for line in lines if line and not line.startswith("#")]
+    assert commands == [
+        'tr -d \'\\r\' < "$(dirname "$0")/../../packages/python/pyproject.toml"'
+        ' | sed -nE \'s/^version = "([^"]*)"$/\\1/p\''
+    ]
+    for path in WORKFLOW_FILES:
+        text = path.read_text(encoding="utf-8")
+        assert "sed -nE" not in text, f"{path.name} inlines the version extraction"
+    assert VERSION_EXTRACTION in CI_WORKFLOW.read_text(encoding="utf-8")
+    assert VERSION_EXTRACTION in RELEASE_WORKFLOW.read_text(encoding="utf-8")
 
 
 def test_publish_scan_catches_secret_names_and_spares_prose() -> None:

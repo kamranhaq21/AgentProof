@@ -42,8 +42,8 @@ from pydantic import AfterValidator, BaseModel, Field, model_validator
 from pydantic_core import PydanticCustomError
 
 from agentproof.constants import STATEMENTS, SUPPORTED_VERSIONS
-from agentproof.models.assertions import MODEL_CONFIG, Count
-from agentproof.models.common import JsonValue, Status
+from agentproof.models.assertions import Count
+from agentproof.models.common import MODEL_CONFIG, JsonValue, Status, _null_means_absent
 from agentproof.models.result import (
     Cost,
     Counts,
@@ -54,7 +54,7 @@ from agentproof.models.result import (
     require_unique_ids,
 )
 from agentproof.models.suite import CompareArgumentPath, SuiteDefaults
-from agentproof.models.trace import Timestamp, _null_means_absent
+from agentproof.models.trace import Timestamp
 
 __all__ = [
     "ArgumentChange",
