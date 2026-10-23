@@ -120,7 +120,9 @@ source_modules =
 forbidden_modules =
     agentproof.cli
 
-# AD-1: the pure core never reaches the effectful shell, directly or otherwise.
+# AD-1: the pure core never imports a shell package directly. An indirect path is
+# caught at its first hop: every module between a core package and the shell is itself
+# a core package bound by this contract or a lower layer of the layers contract.
 [importlinter:contract:core-imports-no-shell]
 name = core imports no shell package
 type = forbidden

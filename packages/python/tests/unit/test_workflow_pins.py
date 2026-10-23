@@ -36,10 +36,12 @@ ALLOWED_ACTIONS = {
 
 # No publishing from any workflow until epic 9 story 5. Case-sensitive on purpose: the
 # prose name "PyPI" in a comment is fine, a `PYPI_*` secret or a publish tool is not.
-# Whole words, so prose such as "intertwined" never trips the scan.
+# Whole words, so prose such as "intertwined" never trips the scan; `PYPI` is matched
+# as a prefix too, so a `PYPI_TOKEN` secret name trips it (retrospective epic 1, finding 2).
 FORBIDDEN_PUBLISH_TEXT = ("uv publish", "twine", "pypi-token", "PYPI", "gh-action-pypi-publish")
 FORBIDDEN_PUBLISH_PATTERNS = [
-    re.compile(rf"\b{re.escape(text)}\b") for text in FORBIDDEN_PUBLISH_TEXT
+    re.compile(r"(?<!\w)PYPI") if text == "PYPI" else re.compile(rf"\b{re.escape(text)}\b")
+    for text in FORBIDDEN_PUBLISH_TEXT
 ]
 
 EXPECTED_OS = ["ubuntu-latest", "windows-latest"]
@@ -301,3 +303,9 @@ def test_release_workflow_drafts_a_release_with_gh_and_the_job_token() -> None:
     assert 'gh release upload "$GITHUB_REF_NAME" --clobber packages/python/dist/*' in create["run"]
     assert "gh release edit" not in create["run"], "an existing release keeps its draft state"
     assert job["steps"][-1] is create, "creating the draft is the last step: nothing publishes"
+
+
+def test_publish_scan_catches_secret_names_and_spares_prose() -> None:
+    hits = [p.pattern for p in FORBIDDEN_PUBLISH_PATTERNS if p.search("env: PYPI_TOKEN")]
+    assert hits == ["(?<!\\w)PYPI"]
+    assert not any(p.search("intertwined PyPI prose MYPYPI") for p in FORBIDDEN_PUBLISH_PATTERNS)
