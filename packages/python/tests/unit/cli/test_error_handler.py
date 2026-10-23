@@ -62,6 +62,12 @@ def passthrough() -> None:
     raise typer.Exit(7)
 
 
+def click_error() -> None:
+    # typer.BadParameter is public and derives from the vendored click's UsageError
+    # (0.27 bundles its own click copy, not a dependency on the real click package).
+    raise typer.BadParameter("bad option value")
+
+
 def fine() -> None:
     typer.echo("ok")
 
@@ -89,6 +95,7 @@ for command in (
     boom,
     silent,
     passthrough,
+    click_error,
     fine,
     leaks_in_execution_error,
     leaks_in_internal_error,
@@ -186,6 +193,15 @@ def test_a_typer_exit_raised_inside_a_command_passes_through_unchanged() -> None
     result = runner.invoke(handled_app, ["passthrough"])
     assert result.exit_code == 7
     assert result.output == ""
+
+
+def test_a_click_exception_keeps_clicks_own_rendering_and_exit_code() -> None:
+    """A click usage error inside a command is click's own concern, not an internal
+    error: the handler must not turn it into exit 4 (review finding, story 3.1)."""
+    result = runner.invoke(handled_app, ["click-error"])
+    assert result.exit_code == 2
+    assert "bad option value" in result.output
+    assert "internal error" not in result.output
 
 
 def test_a_command_that_returns_exits_0() -> None:

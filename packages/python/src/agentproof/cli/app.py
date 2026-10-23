@@ -106,6 +106,13 @@ def _handled(command: Callable[..., None]) -> Callable[..., None]:
             command(*args, **kwargs)
         except (typer.Exit, typer.Abort):
             raise
+        except typer.TyperException:
+            # Typer vendors click internally (0.27 declares no dependency on the real
+            # click package) and exposes its usage-error hierarchy as the public,
+            # stable ``typer.exceptions.TyperException`` (``typer.Exit``/``typer.Abort``
+            # are not part of it, handled above). A callback's BadParameter and similar
+            # keep their own rendering and exit code; they are not an internal error.
+            raise
         except InputError as exc:
             kind = type(exc).__name__
             if exc.violations:
