@@ -30,6 +30,12 @@
 - source: story 3.2 quick-lens review, 2026-10-23, finding 7
   summary: the YAML loader fills `Violation.field` with `<line>:<column>` while `errors.py` documents it as the dotted model path; story 3.3 (parse_suite) mixes both in one list, so it must fix the convention (for example a separate `line` on Violation, or a documented rule that a field matching `\d+:\d+` is a position) and update the errors.py docstring.
   owner: story 3.3.
+- source: story 2.5 (generated JSON Schemas), 2026-10-23, found by the schema v1 fixtures
+  summary: AD-19 defect from story 2.2: `Scenario.skip` rejects a present `null` ("presence means skipped"), but `model_dump(mode="json")` writes `skip: null` for an unskipped Scenario and the generated Suite schema accepts null, so a Suite does not read back from its own dump (null must equal absent). Held as strict xfail in `tests/unit/test_fixtures_v1.py` (`SUITE_DUMP_GAP`); remove the marks when fixed.
+  owner: story 2.7 (refactor sweep) or story 3.3 (parse_suite).
+- source: story 2.5 (generated JSON Schemas), 2026-10-23
+  summary: an unsupported `version` is `literal_error` for a Suite (story 2.2 chose `Literal[1]`) but `unsupported_version` for a Trace and a Report, so the loaders cannot key on one code; decide one code across the three models (a validation change, hence a cross-model decision). The fixtures `suite__literal_error__version` and `trace__unsupported_version__version` name what each model raises today.
+  owner: story 2.7 (refactor sweep).
 - source: story 3.1 review, 2026-10-23
   summary: the CLI error handler prints `str(exc)` for exit 3 and 4, the traceback under `--verbose`, and unwrapped violation messages without running `scrub_text`, so a secret value inside an exception message reaches stderr. Strict `xfail` tests (`test_a_planted_secret_never_reaches_the_output` in `tests/unit/cli/test_error_handler.py`) pin the gap; when `io.console` scrubs every print they XPASS and fail, and must be flipped to plain tests.
   owner: story 3.5 (console scrubber and logging filter).

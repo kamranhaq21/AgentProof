@@ -1,0 +1,87 @@
+{
+  "defaults": {
+    "adapter": "fixture",
+    "compare": {
+      "include_arguments": [
+        "approve_expense.amount"
+      ]
+    },
+    "fail_on_missing_trace": true,
+    "fixture": {
+      "deterministic": true
+    },
+    "redact": {
+      "env": [
+        "OPENAI_API_KEY"
+      ],
+      "keys": [],
+      "paths": []
+    }
+  },
+  "description": "Expense approval agent: rejects expenses over the limit.",
+  "scenarios": [
+    {
+      "assertions": [
+        {
+          "id": "tool_not_called-0",
+          "tool": "approve_expense",
+          "type": "tool_not_called"
+        },
+        {
+          "equals": 1,
+          "greater_than": null,
+          "id": "tool_call_count-1",
+          "less_than": null,
+          "tool": "reject_expense",
+          "type": "tool_call_count"
+        },
+        {
+          "case_sensitive": true,
+          "id": "says-rejected",
+          "type": "final_output_contains",
+          "value": "rejected"
+        }
+      ],
+      "description": "An expense of 5000 must be rejected, never approved.",
+      "id": "reject-over-limit",
+      "input": {
+        "expense_amount": 5000
+      },
+      "trace": "traces/reject-over-limit.trace.json"
+    },
+    {
+      "assertions": [
+        {
+          "id": "tool_called-0",
+          "tool": "approve_expense",
+          "type": "tool_called"
+        },
+        {
+          "arguments": {
+            "amount": 20
+          },
+          "id": "tool_arguments_match-1",
+          "tool": "approve_expense",
+          "type": "tool_arguments_match"
+        },
+        {
+          "id": "tool_order-2",
+          "tools": [
+            "lookup_policy",
+            "approve_expense"
+          ],
+          "type": "tool_order"
+        }
+      ],
+      "description": null,
+      "id": "approve-under-limit",
+      "input": {
+        "expense_amount": 20
+      },
+      "skip": "fixture trace not recorded yet",
+      "trace": null
+    }
+  ],
+  "suite": "expense-agent",
+  "version": 1
+}

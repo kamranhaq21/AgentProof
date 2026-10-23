@@ -1,0 +1,934 @@
+{
+  "$defs": {
+    "AdapterInfo": {
+      "additionalProperties": false,
+      "description": "The adapter that produced the Trace; every adapter declares a name and a version (AD-9).",
+      "properties": {
+        "name": {
+          "description": "The adapter's registered name, such as fixture.",
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "description": "The adapter's version string.",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "AdapterInfo",
+      "type": "object"
+    },
+    "AgentInfo": {
+      "additionalProperties": false,
+      "description": "The agent under test as the adapter identifies it; the version may be unknown.",
+      "properties": {
+        "name": {
+          "description": "The name of the agent under test.",
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The agent's version string, when the adapter knows it.",
+          "title": "Version"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "AgentInfo",
+      "type": "object"
+    },
+    "AssertionResult": {
+      "additionalProperties": false,
+      "description": "What one Assertion produced against one Trace (PRD FR-17; spine Schemas seed).\n\n``evidence`` lists the ``seq`` of every event the verdict rests on, so a reader can\nopen the embedded Trace at those events. ``detail`` is free-form structured data the\nassertion adds, such as the expected and actual values; ``message`` is the one plain\nsentence a reviewer reads.",
+      "properties": {
+        "assertion_id": {
+          "description": "The id of the Assertion that produced this result (PRD AC-17.4).",
+          "minLength": 1,
+          "title": "Assertion Id",
+          "type": "string"
+        },
+        "detail": {
+          "$ref": "#/$defs/JsonValue",
+          "default": null,
+          "description": "Structured detail the assertion adds, such as expected and actual values."
+        },
+        "evidence": {
+          "description": "The seq values of the Trace events the verdict rests on, in order.",
+          "items": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "message": {
+          "description": "One plain sentence explaining the verdict, including any capture caveat.",
+          "title": "Message",
+          "type": "string"
+        },
+        "status": {
+          "description": "The verdict: passed, failed, error, or skipped.",
+          "enum": [
+            "passed",
+            "failed",
+            "error",
+            "skipped"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "type": {
+          "description": "The assertion type that ran, such as tool_not_called.",
+          "minLength": 1,
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "assertion_id",
+        "type",
+        "status",
+        "message",
+        "evidence"
+      ],
+      "title": "AssertionResult",
+      "type": "object"
+    },
+    "Capture": {
+      "additionalProperties": false,
+      "description": "The adapter's Capture declaration (AD-5; PRD AC-5.6).\n\n``complete`` means every tool call the agent made is in the Trace, so absence proofs\nsuch as ``tool_not_called`` are conclusive; ``partial`` and ``unknown`` make them\nlimited to what the adapter observed (``constants.STATEMENTS.capture_limited``). An\nadapter that omits the declaration gets ``unknown``.",
+      "properties": {
+        "tool_calls": {
+          "default": "unknown",
+          "description": "How completely the adapter observed the agent's tool calls: complete, partial, or unknown; unknown when the adapter made no declaration.",
+          "enum": [
+            "complete",
+            "partial",
+            "unknown"
+          ],
+          "title": "Tool Calls",
+          "type": "string"
+        }
+      },
+      "title": "Capture",
+      "type": "object"
+    },
+    "CompareDefaults": {
+      "additionalProperties": false,
+      "description": "``defaults.compare``: what a Comparison looks at beyond statuses and tool sequences.\n\n``include_arguments`` lists ``<tool>.<argument path>`` entries, for example\n``approve_expense.amount``; by default no arguments are compared (PRD AC-26.5).",
+      "properties": {
+        "include_arguments": {
+          "default": [],
+          "description": "The <tool>.<argument path> entries a Comparison compares, such as approve_expense.amount; empty by default.",
+          "items": {
+            "pattern": "^[^.\\s]+(\\.[^.\\s]+)*$",
+            "type": "string"
+          },
+          "title": "Include Arguments",
+          "type": "array"
+        }
+      },
+      "title": "CompareDefaults",
+      "type": "object"
+    },
+    "Counts": {
+      "additionalProperties": false,
+      "description": "How many Assertion Results carry each ``Status`` (PRD AC-22.3).\n\nOne key per status, every key always present, so two Counts compare field by field\nand a Report's summary never has a missing bucket.",
+      "properties": {
+        "error": {
+          "description": "How many Assertion Results have status error.",
+          "minimum": 0,
+          "title": "Error",
+          "type": "integer"
+        },
+        "failed": {
+          "description": "How many Assertion Results have status failed.",
+          "minimum": 0,
+          "title": "Failed",
+          "type": "integer"
+        },
+        "passed": {
+          "description": "How many Assertion Results have status passed.",
+          "minimum": 0,
+          "title": "Passed",
+          "type": "integer"
+        },
+        "skipped": {
+          "description": "How many Assertion Results have status skipped.",
+          "minimum": 0,
+          "title": "Skipped",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "passed",
+        "failed",
+        "error",
+        "skipped"
+      ],
+      "title": "Counts",
+      "type": "object"
+    },
+    "Environment": {
+      "additionalProperties": false,
+      "description": "The allowlisted environment metadata (AD-9; PRD AC-5.5).\n\nOnly the runner fills these four fields, from the package version, the interpreter\nversion, the operating system name, and an optional source revision. Process\nenvironment variables, hostnames, and user names have no field here and are rejected\nas unknown keys.",
+      "properties": {
+        "os": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The operating system name of the run.",
+          "title": "Os"
+        },
+        "package_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The AgentProof package version that produced the Trace.",
+          "title": "Package Version"
+        },
+        "python_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The Python interpreter version of the run.",
+          "title": "Python Version"
+        },
+        "source_revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The source revision of the agent under test, when known.",
+          "title": "Source Revision"
+        }
+      },
+      "title": "Environment",
+      "type": "object"
+    },
+    "EventError": {
+      "additionalProperties": false,
+      "description": "The error an event records: its type name, message, and whether it was unhandled.",
+      "properties": {
+        "message": {
+          "description": "The error's message text.",
+          "title": "Message",
+          "type": "string"
+        },
+        "type": {
+          "description": "The error's type name, such as the exception class.",
+          "title": "Type",
+          "type": "string"
+        },
+        "unhandled": {
+          "description": "Whether the error escaped the agent unhandled and ended the run.",
+          "title": "Unhandled",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "message",
+        "unhandled"
+      ],
+      "title": "EventError",
+      "type": "object"
+    },
+    "FixtureDefaults": {
+      "additionalProperties": false,
+      "description": "``defaults.fixture``: how the Fixture Agent runs (AD-9; ARCH-5).\n\nWith ``deterministic`` the runner derives ``run_id`` (``fixture-<scenario id>``) and\nthe timestamps from the fixture Trace instead of the clock, so repeated runs write\nbyte-identical artifacts.",
+      "properties": {
+        "deterministic": {
+          "default": false,
+          "description": "Whether the runner derives run_id and timestamps from the fixture Trace instead of the clock, so repeated runs write byte-identical artifacts.",
+          "title": "Deterministic",
+          "type": "boolean"
+        }
+      },
+      "title": "FixtureDefaults",
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "ModelInfo": {
+      "additionalProperties": false,
+      "description": "The language model behind the run; both the provider and the name are optional (AC-5.1).",
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The model's name, when known.",
+          "title": "Name"
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The model provider's name, when known.",
+          "title": "Provider"
+        }
+      },
+      "title": "ModelInfo",
+      "type": "object"
+    },
+    "RedactDefaults": {
+      "additionalProperties": false,
+      "description": "``defaults.redact``: the Redaction rules (AD-10, PRD FR-31).\n\n``keys`` extends the built-in key set (``api_key``, ``token``, ``password``,\n``authorization``) and cannot remove from it; ``paths`` are dotted paths; ``env`` names\nenvironment variables whose current values the runner scrubs. Names only, never\nvalues.",
+      "properties": {
+        "env": {
+          "default": [],
+          "description": "Names of environment variables whose current values are scrubbed from every artifact; names only, never values.",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Env",
+          "type": "array"
+        },
+        "keys": {
+          "default": [],
+          "description": "Additional key names whose values are redacted wherever they appear, extending the built-in set (api_key, token, password, authorization).",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Keys",
+          "type": "array"
+        },
+        "paths": {
+          "default": [],
+          "description": "Dotted paths into event payloads whose values are redacted.",
+          "items": {
+            "pattern": "^[^.\\s]+(\\.[^.\\s]+)*$",
+            "type": "string"
+          },
+          "title": "Paths",
+          "type": "array"
+        }
+      },
+      "title": "RedactDefaults",
+      "type": "object"
+    },
+    "RedactionState": {
+      "additionalProperties": false,
+      "description": "What redaction has done to this Trace (AD-10; PRD AC-31.2).\n\n``paths`` are the configured rule strings that matched; ``env_names`` are the names\n(never the values) of the environment variables whose values were scrubbed. A Trace\nnobody redacted carries ``applied=False`` with empty lists.",
+      "properties": {
+        "applied": {
+          "default": false,
+          "description": "Whether redaction has been applied to this Trace.",
+          "title": "Applied",
+          "type": "boolean"
+        },
+        "env_names": {
+          "description": "The names, never the values, of the environment variables whose values were scrubbed.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Env Names",
+          "type": "array"
+        },
+        "paths": {
+          "description": "The configured redaction keys and paths that matched a value.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Paths",
+          "type": "array"
+        }
+      },
+      "title": "RedactionState",
+      "type": "object"
+    },
+    "ScenarioResult": {
+      "additionalProperties": false,
+      "description": "One Scenario's evaluation: its status, one result per Assertion, and the Trace (AD-6).\n\n``skip_reason`` is set when the Scenario was skipped (status ``skipped``) and\n``execution_error`` when the adapter failed or the Trace was missing under\n``fail_on_missing_trace`` (status ``error``); the engine sets at most one of them.\n``trace`` is the redacted Trace the results were evaluated against, or ``None`` when\nthere was none (PRD AC-22.4). ``duration_ms`` and ``cost`` are the run's optional\ntiming and cost (PRD FR-22), present when the runner or the adapter supplied them.",
+      "properties": {
+        "assertions": {
+          "description": "One result per Assertion of the Scenario, in Suite order; at least one.",
+          "items": {
+            "$ref": "#/$defs/AssertionResult"
+          },
+          "minItems": 1,
+          "title": "Assertions",
+          "type": "array"
+        },
+        "cost": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The run's cost in the adapter's unit when the adapter supplied one.",
+          "title": "Cost"
+        },
+        "counts": {
+          "$ref": "#/$defs/Counts",
+          "description": "How many of this Scenario's Assertion Results carry each status."
+        },
+        "duration_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How long the run took, in whole milliseconds, when the runner measured it.",
+          "title": "Duration Ms"
+        },
+        "execution_error": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why the run could not produce evidence (adapter failure or missing Trace; status error), else null.",
+          "title": "Execution Error"
+        },
+        "scenario_id": {
+          "description": "The id of the Scenario evaluated.",
+          "minLength": 1,
+          "title": "Scenario Id",
+          "type": "string"
+        },
+        "skip_reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The Scenario's skip reason when it was skipped (status skipped), else null.",
+          "title": "Skip Reason"
+        },
+        "status": {
+          "description": "The Scenario's folded status: passed, failed, error, or skipped.",
+          "enum": [
+            "passed",
+            "failed",
+            "error",
+            "skipped"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "trace": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Trace"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The redacted Trace the results were evaluated against, or null when absent."
+        }
+      },
+      "required": [
+        "scenario_id",
+        "status",
+        "counts",
+        "assertions"
+      ],
+      "title": "ScenarioResult",
+      "type": "object"
+    },
+    "SchemaVersions": {
+      "additionalProperties": false,
+      "description": "The Suite and Trace schema versions the run used (spine Schemas seed).\n\nRecorded so a reader of an old Report knows which Suite and Trace rules applied; the\nembedded Traces carry their own ``version`` and are validated by it.",
+      "properties": {
+        "suite": {
+          "description": "The Suite schema version of the Suite that was run.",
+          "minimum": 1,
+          "title": "Suite",
+          "type": "integer"
+        },
+        "trace": {
+          "description": "The Trace schema version of the Traces that were evaluated.",
+          "minimum": 1,
+          "title": "Trace",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "suite",
+        "trace"
+      ],
+      "title": "SchemaVersions",
+      "type": "object"
+    },
+    "SuiteDefaults": {
+      "additionalProperties": false,
+      "description": "Suite-level settings every Scenario inherits (PRD Glossary \"Suite defaults\").\n\nEvery field is optional in YAML; the Report snapshots the whole model with every\nfield written (AD-19), so an absent section serializes as its defaults.",
+      "properties": {
+        "adapter": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The adapter name or pkg.module:ClassName that runs the Scenarios; the CLI --adapter option overrides it.",
+          "title": "Adapter"
+        },
+        "compare": {
+          "$ref": "#/$defs/CompareDefaults",
+          "description": "What a Comparison looks at beyond statuses and tool sequences."
+        },
+        "fail_on_missing_trace": {
+          "default": true,
+          "description": "Whether an absent Trace yields error results (true) or skipped results (false).",
+          "title": "Fail On Missing Trace",
+          "type": "boolean"
+        },
+        "fixture": {
+          "$ref": "#/$defs/FixtureDefaults",
+          "description": "How the Fixture Agent runs."
+        },
+        "redact": {
+          "$ref": "#/$defs/RedactDefaults",
+          "description": "The Redaction rules for every artifact."
+        }
+      },
+      "title": "SuiteDefaults",
+      "type": "object"
+    },
+    "ToolRef": {
+      "additionalProperties": false,
+      "description": "The tool a ``tool_call`` or ``tool_result`` event refers to (AD-5).\n\n``call_id`` links a result to its call when the adapter provides one; without it the\nengine links a result to the nearest preceding ``tool_call`` with the same name.",
+      "properties": {
+        "call_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The adapter's identifier linking a tool_result to its tool_call, if any.",
+          "title": "Call Id"
+        },
+        "name": {
+          "description": "The tool's name as the agent invoked it.",
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "ToolRef",
+      "type": "object"
+    },
+    "Trace": {
+      "additionalProperties": false,
+      "description": "One recorded run of an agent against a Scenario (``version`` 1; spine Schemas seed).\n\n``run_id``, ``started_at``, ``ended_at`` and ``environment`` are owned by the runner,\nwhich overwrites whatever an adapter put there (AD-9). ``events`` must carry\ncontiguous ``seq`` values starting at 0; the validator reports the first event whose\n``seq`` differs from its index, located at ``events.<index>.seq``.",
+      "properties": {
+        "adapter": {
+          "$ref": "#/$defs/AdapterInfo",
+          "description": "The adapter that produced this Trace."
+        },
+        "agent": {
+          "$ref": "#/$defs/AgentInfo",
+          "description": "The agent under test."
+        },
+        "capture": {
+          "$ref": "#/$defs/Capture",
+          "description": "The adapter's declaration of how completely it captured tool calls."
+        },
+        "ended_at": {
+          "description": "When the run ended, as an RFC 3339 string with an explicit offset.",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?(Z|[+-][0-9]{2}:[0-9]{2})$",
+          "title": "Ended At",
+          "type": "string"
+        },
+        "environment": {
+          "$ref": "#/$defs/Environment",
+          "description": "Allowlisted environment metadata filled by the runner."
+        },
+        "events": {
+          "description": "The recorded events in order; seq runs 0, 1, 2, ... without gaps.",
+          "items": {
+            "$ref": "#/$defs/TraceEvent"
+          },
+          "title": "Events",
+          "type": "array"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ModelInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The language model behind the run, when known."
+        },
+        "redaction": {
+          "$ref": "#/$defs/RedactionState",
+          "description": "What redaction has been applied to this Trace."
+        },
+        "run_id": {
+          "description": "The run identifier the runner assigned.",
+          "title": "Run Id",
+          "type": "string"
+        },
+        "scenario_id": {
+          "description": "The id of the Scenario this run executed.",
+          "title": "Scenario Id",
+          "type": "string"
+        },
+        "started_at": {
+          "description": "When the run started, as an RFC 3339 string with an explicit offset.",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?(Z|[+-][0-9]{2}:[0-9]{2})$",
+          "title": "Started At",
+          "type": "string"
+        },
+        "version": {
+          "description": "The Trace schema version, an integer independent of the package version.",
+          "enum": [
+            1
+          ],
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "version",
+        "run_id",
+        "scenario_id",
+        "started_at",
+        "ended_at",
+        "agent",
+        "adapter",
+        "events"
+      ],
+      "title": "Trace",
+      "type": "object"
+    },
+    "TraceEvent": {
+      "additionalProperties": false,
+      "description": "One recorded event (spine Schemas seed; AD-5).\n\n``seq`` is the event's 0-based position and the only thing evidence points at. Which\noptional fields an event carries depends on its ``type``: ``tool_call`` carries\n``tool`` and ``arguments``, ``tool_result`` carries ``tool``, ``result`` and\n``status``, ``agent_finished`` carries the Final Output in ``output``, ``exception``\ncarries ``error``. ``redacted`` marks an event the scrubber changed; ``metadata`` is\nfree-form adapter data.",
+      "properties": {
+        "arguments": {
+          "$ref": "#/$defs/JsonValue",
+          "default": null,
+          "description": "The arguments passed to the tool on a tool_call."
+        },
+        "duration_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How long the event took, in whole milliseconds.",
+          "title": "Duration Ms"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EventError"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The error an exception or failed event records."
+        },
+        "metadata": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "description": "Free-form adapter metadata about the event.",
+          "title": "Metadata",
+          "type": "object"
+        },
+        "output": {
+          "$ref": "#/$defs/JsonValue",
+          "default": null,
+          "description": "The Final Output of the run on an agent_finished event."
+        },
+        "redacted": {
+          "default": false,
+          "description": "Whether redaction changed a value in this event.",
+          "title": "Redacted",
+          "type": "boolean"
+        },
+        "result": {
+          "$ref": "#/$defs/JsonValue",
+          "default": null,
+          "description": "The value the tool returned on a tool_result."
+        },
+        "seq": {
+          "description": "The event's 0-based position in events; evidence points at this value.",
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The adapter's status word for the event, such as ok.",
+          "title": "Status"
+        },
+        "timestamp": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?(Z|[+-][0-9]{2}:[0-9]{2})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "When the event occurred, as an RFC 3339 string with an explicit offset.",
+          "title": "Timestamp"
+        },
+        "tool": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ToolRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The tool a tool_call or tool_result refers to."
+        },
+        "type": {
+          "description": "The event type, one of the eleven documented values.",
+          "enum": [
+            "agent_started",
+            "agent_finished",
+            "tool_call",
+            "tool_result",
+            "llm_request",
+            "llm_response",
+            "exception",
+            "approval_requested",
+            "approval_granted",
+            "approval_denied",
+            "custom"
+          ],
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "seq",
+        "type"
+      ],
+      "title": "TraceEvent",
+      "type": "object"
+    }
+  },
+  "$id": "urn:agentproof:schema:report-v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "The JSON Report (``version`` 1; spine Schemas seed; PRD FR-22).\n\n``run_id``, ``created_at``, and ``package_version`` are volatile between runs and\n``canonical.VOLATILE_PATHS`` names them, as it names each Scenario's Trace identity,\ntimestamps, durations, and ``cost``. Everything else is a deterministic function of\nthe Suite and the Traces.",
+  "properties": {
+    "counts": {
+      "$ref": "#/$defs/Counts",
+      "description": "How many Assertion Results across every Scenario carry each status."
+    },
+    "created_at": {
+      "description": "When the Report was created, as an RFC 3339 string with an explicit offset.",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?(Z|[+-][0-9]{2}:[0-9]{2})$",
+      "title": "Created At",
+      "type": "string"
+    },
+    "defaults": {
+      "$ref": "#/$defs/SuiteDefaults",
+      "description": "The Suite defaults snapshot, every field written; compare reads it."
+    },
+    "execution_failed": {
+      "description": "Whether any Scenario carries an execution error (CLI exit 3).",
+      "title": "Execution Failed",
+      "type": "boolean"
+    },
+    "package_version": {
+      "description": "The AgentProof package version that wrote the Report.",
+      "minLength": 1,
+      "title": "Package Version",
+      "type": "string"
+    },
+    "run_id": {
+      "description": "The run identifier the runner assigned.",
+      "minLength": 1,
+      "title": "Run Id",
+      "type": "string"
+    },
+    "scenarios": {
+      "description": "One result per Scenario, in Suite order, each with its redacted Trace.",
+      "items": {
+        "$ref": "#/$defs/ScenarioResult"
+      },
+      "minItems": 1,
+      "title": "Scenarios",
+      "type": "array"
+    },
+    "schema_versions": {
+      "$ref": "#/$defs/SchemaVersions",
+      "description": "The Suite and Trace schema versions the run used."
+    },
+    "suite_id": {
+      "description": "The id of the Suite that was run.",
+      "minLength": 1,
+      "title": "Suite Id",
+      "type": "string"
+    },
+    "suite_status": {
+      "description": "The Suite's folded status: passed, failed, error, or skipped.",
+      "enum": [
+        "passed",
+        "failed",
+        "error",
+        "skipped"
+      ],
+      "title": "Suite Status",
+      "type": "string"
+    },
+    "version": {
+      "description": "The Report schema version, an integer independent of the package version.",
+      "enum": [
+        1
+      ],
+      "title": "Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "version",
+    "suite_id",
+    "run_id",
+    "created_at",
+    "package_version",
+    "schema_versions",
+    "defaults",
+    "suite_status",
+    "execution_failed",
+    "counts",
+    "scenarios"
+  ],
+  "title": "Report",
+  "type": "object"
+}

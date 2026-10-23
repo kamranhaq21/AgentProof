@@ -61,22 +61,28 @@ class AssertionConfigBase(BaseModel):
 
     model_config = MODEL_CONFIG
 
-    id: str | None = Field(default=None, min_length=1)
-    """The Assertion id every Assertion Result carries; defaults to ``<type>-<index>``."""
+    id: str | None = Field(
+        default=None,
+        min_length=1,
+        description=(
+            "The Assertion id every Assertion Result carries; defaults to <type>-<index> with "
+            "the 0-based position in the Scenario's assertions list."
+        ),
+    )
 
 
 class ToolCalled(AssertionConfigBase):
     """PRD FR-11: at least one ``tool_call`` Event with this tool name exists."""
 
-    type: Literal["tool_called"]
-    tool: ToolName
+    type: Literal["tool_called"] = Field(description="The assertion type: tool_called.")
+    tool: ToolName = Field(description="The tool name as the Trace records it.")
 
 
 class ToolNotCalled(AssertionConfigBase):
     """PRD FR-12: no ``tool_call`` Event with this tool name exists."""
 
-    type: Literal["tool_not_called"]
-    tool: ToolName
+    type: Literal["tool_not_called"] = Field(description="The assertion type: tool_not_called.")
+    tool: ToolName = Field(description="The tool name as the Trace records it.")
 
 
 class ToolCallCount(AssertionConfigBase):
@@ -86,11 +92,22 @@ class ToolCallCount(AssertionConfigBase):
     a non-negative integer.
     """
 
-    type: Literal["tool_call_count"]
-    tool: ToolName
-    equals: Count | None = None
-    greater_than: Count | None = None
-    less_than: Count | None = None
+    type: Literal["tool_call_count"] = Field(description="The assertion type: tool_call_count.")
+    tool: ToolName = Field(description="The tool name as the Trace records it.")
+    equals: Count | None = Field(
+        default=None,
+        description="Passes when the tool_call count equals this; one comparison is given.",
+    )
+    greater_than: Count | None = Field(
+        default=None,
+        description=(
+            "Passes when the tool_call count is greater than this; one comparison is given."
+        ),
+    )
+    less_than: Count | None = Field(
+        default=None,
+        description="Passes when the tool_call count is less than this; one comparison is given.",
+    )
 
     @model_validator(mode="after")
     def _exactly_one_operator(self) -> Self:
@@ -120,9 +137,17 @@ class ToolArgumentsMatch(AssertionConfigBase):
     mapping is a plain dict and is not deep-frozen.
     """
 
-    type: Literal["tool_arguments_match"]
-    tool: ToolName
-    arguments: dict[ArgumentPath, JsonValue] = Field(min_length=1)
+    type: Literal["tool_arguments_match"] = Field(
+        description="The assertion type: tool_arguments_match."
+    )
+    tool: ToolName = Field(description="The tool name as the Trace records it.")
+    arguments: dict[ArgumentPath, JsonValue] = Field(
+        min_length=1,
+        description=(
+            "Dotted argument path (items.0.amount) to the expected JSON value; some tool_call "
+            "must match every path exactly."
+        ),
+    )
 
 
 class ToolOrder(AssertionConfigBase):
@@ -133,8 +158,14 @@ class ToolOrder(AssertionConfigBase):
     fail.
     """
 
-    type: Literal["tool_order"]
-    tools: tuple[ToolName, ...] = Field(min_length=1)
+    type: Literal["tool_order"] = Field(description="The assertion type: tool_order.")
+    tools: tuple[ToolName, ...] = Field(
+        min_length=1,
+        description=(
+            "Tool names in the required relative order; the first tool_call of each is the "
+            "one ordered and other events may intervene."
+        ),
+    )
 
 
 class FinalOutputContains(AssertionConfigBase):
@@ -144,9 +175,19 @@ class FinalOutputContains(AssertionConfigBase):
     ``value`` is non-empty; the empty string is a substring of everything.
     """
 
-    type: Literal["final_output_contains"]
-    value: str = Field(min_length=1)
-    case_sensitive: bool = True
+    type: Literal["final_output_contains"] = Field(
+        description="The assertion type: final_output_contains."
+    )
+    value: str = Field(
+        min_length=1,
+        description=(
+            "The literal substring the Final Output must contain; structured output is "
+            "matched in its compact Canonical form."
+        ),
+    )
+    case_sensitive: bool = Field(
+        default=True, description="Whether the substring match is case-sensitive."
+    )
 
 
 ASSERTION_MODELS: Final[tuple[type[AssertionConfigBase], ...]] = (
@@ -168,7 +209,12 @@ AssertionConfig = Annotated[
     | FinalOutputContains,
     Field(discriminator="type"),
 ]
-"""The static union of the six configurations, discriminated on ``type`` (AD-8)."""
+"""The static union of the six configurations, discriminated on ``type`` (AD-8).
+
+In the exported JSON Schema this is a ``oneOf`` plus a ``discriminator`` keyword. The
+``discriminator`` keyword is OpenAPI-only and advisory under JSON Schema 2020-12; the
+``oneOf`` branches validate correctly without it, because each branch's ``type`` is a
+``const`` so exactly one branch matches."""
 
 ASSERTION_TYPES: Final[tuple[str, ...]] = tuple(
     get_args(model.model_fields["type"].annotation)[0] for model in ASSERTION_MODELS
