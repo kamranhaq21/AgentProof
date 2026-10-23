@@ -3,7 +3,7 @@ title: 'CI runs the check entry point on Linux and Windows across Python 3.12 to
 type: 'feature'
 ticket: '4'
 created: '2026-10-23'
-status: 'built'
+status: done
 baseline_revision: 'bd292752290c78f4baa01bac40127d01027dac65'
 route: 'full'
 route_source: 'pinned'
