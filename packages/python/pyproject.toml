@@ -40,6 +40,12 @@ agentproof-devtools = { workspace = true }
 [tool.hatch.build.targets.wheel]
 packages = ["src/agentproof"]
 
+[tool.hatch.build.targets.sdist]
+# The source archive is a release asset (release-draft.yml). It carries what builds the
+# wheel plus the project files; the devtools workspace member and the test suite stay
+# in the repository (tests/integration/test_install_smoke.py checks this).
+exclude = ["/devtools", "/tests"]
+
 [tool.ruff]
 line-length = 100
 # Both source roots, so ruff sorts `agentproof_devtools` as first-party like `agentproof`.
