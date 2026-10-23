@@ -116,7 +116,7 @@ flowchart TB
 
 - **Binds:** `schemas/`, `models`
 - **Prevents:** the published schema and the Pydantic model drifting apart.
-- **Rule:** `schemas/suite-v1.schema.json`, `schemas/trace-v1.schema.json`, `schemas/report-v1.schema.json` are produced by `python -m agentproof.models.export_schemas` from `model_json_schema()` (JSON Schema 2020-12) and committed. A test regenerates them and fails on any diff. Consumers on other stacks validate against these files; the Python package validates with Pydantic and never imports `jsonschema` at runtime.
+- **Rule:** `schemas/suite-v1.schema.json`, `schemas/trace-v1.schema.json`, `schemas/report-v1.schema.json` are produced by `python -m agentproof_devtools.export_schemas` (a devtools script that writes the text of the pure `agentproof.models.export_schemas.render`) from `model_json_schema()` (JSON Schema 2020-12) and committed. A test regenerates them and fails on any diff. Consumers on other stacks validate against these files; the Python package validates with Pydantic and never imports `jsonschema` at runtime.
 
 ### AD-5 — Trace event addressing and Final Output
 

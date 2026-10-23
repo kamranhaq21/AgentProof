@@ -1,0 +1,11 @@
+{
+  "scenarios": [
+    {
+      "assertions": [],
+      "id": "only",
+      "input": {}
+    }
+  ],
+  "suite": "minimal",
+  "version": 1
+}
