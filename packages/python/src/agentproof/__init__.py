@@ -8,6 +8,9 @@ the ``name`` field in ``pyproject.toml`` when OQ-1 is decided.
 
 from importlib.metadata import version as _distribution_version
 
+from agentproof.loading.suite import parse_suite
+from agentproof.runner.suite_file import load_suite
+
 __version__: str = _distribution_version("agentproof")
 
-__all__ = ["__version__"]
+__all__ = ["__version__", "load_suite", "parse_suite"]

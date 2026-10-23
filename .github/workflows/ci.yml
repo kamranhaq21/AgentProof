@@ -132,16 +132,18 @@ jobs:
         shell: bash
 
       # The venv's own console script (`bin/agentproof` on Linux, `Scripts/agentproof.exe`
-      # on Windows) must print exactly the version pyproject.toml declares. Carriage
-      # returns are stripped on both sides: the Windows checkout normalises pyproject.toml
-      # to CRLF, and Python's piped stdout writes CRLF there too.
+      # on Windows) must print `agentproof <version>` with exactly the version
+      # pyproject.toml declares as the first line of `agentproof version` (the schema
+      # version lines follow it; story 3.1). Carriage returns are stripped on both sides:
+      # the Windows checkout normalises pyproject.toml to CRLF, and Python's piped stdout
+      # writes CRLF there too.
       - run: |
-          expected="$(tr -d '\r' < packages/python/pyproject.toml | sed -nE 's/^version = "([^"]*)"$/\1/p')"
+          expected="$(bash .github/scripts/pyproject-version.sh)"
           exe=.smoke/bin/agentproof
           [ -x "$exe" ] || exe=.smoke/Scripts/agentproof.exe
-          actual="$("$exe" version | tr -d '\r')"
-          echo "agentproof version -> '$actual' (expected '$expected')"
-          test -n "$expected" && test "$actual" = "$expected"
+          actual="$("$exe" version | tr -d '\r' | head -n1)"
+          echo "agentproof version -> '$actual' (expected 'agentproof $expected')"
+          test -n "$expected" && test "$actual" = "agentproof $expected"
         shell: bash
 
   audit:

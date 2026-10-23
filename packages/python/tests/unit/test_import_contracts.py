@@ -17,9 +17,8 @@ from pathlib import Path
 import pytest
 
 from agentproof_devtools.purity import CORE_PACKAGES
+from testsupport import PACKAGE_ROOT, REPOSITORY_ROOT, run_captured
 
-PACKAGE_ROOT = Path(__file__).resolve().parents[2]
-REPOSITORY_ROOT = PACKAGE_ROOT.parents[1]
 PYPROJECT = PACKAGE_ROOT / "pyproject.toml"
 IMPORTLINTER = REPOSITORY_ROOT / ".importlinter"
 SUBPROCESS_TIMEOUT_SECONDS = 300
@@ -44,16 +43,7 @@ def _completed(
     argv: list[str], *, cwd: Path, extra_env: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
     env = {**os.environ, "NO_COLOR": "1", "PYTHONIOENCODING": "utf-8", **(extra_env or {})}
-    return subprocess.run(
-        argv,
-        cwd=cwd,
-        env=env,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=SUBPROCESS_TIMEOUT_SECONDS,
-        check=False,
-    )
+    return run_captured(argv, cwd=cwd, env=env, timeout=SUBPROCESS_TIMEOUT_SECONDS)
 
 
 @pytest.fixture
@@ -131,14 +121,35 @@ def test_upward_import_from_models_to_cli_breaks_the_contracts(tree: Path) -> No
     assert "Contracts: 7 kept, 0 broken." not in linted.stdout
 
 
-def test_cli_importing_models_directly_breaks_the_cli_contract(tree: Path) -> None:
-    """The layers allow cli -> models; the forbidden cli contract is what must catch it."""
-    _append(tree, "cli/app.py", "\nimport agentproof.models\n")
+def test_cli_importing_engine_directly_breaks_the_cli_contract(tree: Path) -> None:
+    """The layers allow cli -> engine; the forbidden cli contract is what must catch it."""
+    _append(tree, "cli/app.py", "\nimport agentproof.engine\n")
     linted = lint_imports(tree)
     assert linted.returncode != 0
-    assert "cli imports only runner and io BROKEN" in linted.stdout
+    assert "cli imports only runner, io, errors, constants, models BROKEN" in linted.stdout
     assert "agentproof.cli.app" in linted.stdout
-    assert "agentproof.models" in linted.stdout
+    assert "agentproof.engine" in linted.stdout
+
+
+def test_cli_may_import_the_public_api_modules_directly() -> None:
+    """Story 3.1: AD-2 lets cli import the public API (AD-15), so `errors`, `constants`,
+    and `models` are not forbidden; the clean-copy test above proves the live imports in
+    `cli/app.py`, `cli/exit_codes.py`, and `cli/commands/version.py` keep every contract."""
+    forbidden = _cli_forbidden_modules(IMPORTLINTER.read_text(encoding="utf-8"))
+    assert {"agentproof.errors", "agentproof.constants", "agentproof.models"}.isdisjoint(forbidden)
+    assert {"agentproof.engine", "agentproof.loading", "agentproof.testing"} <= forbidden
+
+
+def _cli_forbidden_modules(config: str) -> set[str]:
+    """The `forbidden_modules` of the `cli` contract, read from the config text."""
+    section = config.split("[importlinter:contract:cli]", 1)[1].split("[importlinter:", 1)[0]
+    body = section.split("forbidden_modules =", 1)[1]
+    modules: set[str] = set()
+    for line in body.splitlines()[1:]:
+        if not line.startswith(" "):
+            break
+        modules.add(line.strip())
+    return modules
 
 
 @pytest.mark.parametrize(

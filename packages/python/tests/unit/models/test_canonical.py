@@ -123,6 +123,7 @@ def test_volatile_paths_are_exactly_the_spines_patterns() -> None:
         "scenarios[*].trace.environment",
         "scenarios[*].trace.events[*].timestamp",
         "scenarios[*].trace.events[*].duration_ms",
+        "scenarios[*].duration_ms",
         "scenarios[*].cost",
     )
     assert len(set(VOLATILE_PATHS)) == len(VOLATILE_PATHS)

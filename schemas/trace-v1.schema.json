@@ -1,0 +1,504 @@
+{
+  "$defs": {
+    "AdapterInfo": {
+      "additionalProperties": false,
+      "description": "The adapter that produced the Trace; every adapter declares a name and a version (AD-9).",
+      "properties": {
+        "name": {
+          "description": "The adapter's registered name, such as fixture.",
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "description": "The adapter's version string.",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "AdapterInfo",
+      "type": "object"
+    },
+    "AgentInfo": {
+      "additionalProperties": false,
+      "description": "The agent under test as the adapter identifies it; the version may be unknown.",
+      "properties": {
+        "name": {
+          "description": "The name of the agent under test.",
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The agent's version string, when the adapter knows it.",
+          "title": "Version"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "AgentInfo",
+      "type": "object"
+    },
+    "Capture": {
+      "additionalProperties": false,
+      "description": "The adapter's Capture declaration (AD-5; PRD AC-5.6).\n\n``complete`` means every tool call the agent made is in the Trace, so absence proofs\nsuch as ``tool_not_called`` are conclusive; ``partial`` and ``unknown`` make them\nlimited to what the adapter observed (``constants.STATEMENTS.capture_limited``). An\nadapter that omits the declaration gets ``unknown``.",
+      "properties": {
+        "tool_calls": {
+          "default": "unknown",
+          "description": "How completely the adapter observed the agent's tool calls: complete, partial, or unknown; unknown when the adapter made no declaration.",
+          "enum": [
+            "complete",
+            "partial",
+            "unknown"
+          ],
+          "title": "Tool Calls",
+          "type": "string"
+        }
+      },
+      "title": "Capture",
+      "type": "object"
+    },
+    "Environment": {
+      "additionalProperties": false,
+      "description": "The allowlisted environment metadata (AD-9; PRD AC-5.5).\n\nOnly the runner fills these four fields, from the package version, the interpreter\nversion, the operating system name, and an optional source revision. Process\nenvironment variables, hostnames, and user names have no field here and are rejected\nas unknown keys.",
+      "properties": {
+        "os": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The operating system name of the run.",
+          "title": "Os"
+        },
+        "package_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The AgentProof package version that produced the Trace.",
+          "title": "Package Version"
+        },
+        "python_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The Python interpreter version of the run.",
+          "title": "Python Version"
+        },
+        "source_revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The source revision of the agent under test, when known.",
+          "title": "Source Revision"
+        }
+      },
+      "title": "Environment",
+      "type": "object"
+    },
+    "EventError": {
+      "additionalProperties": false,
+      "description": "The error an event records: its type name, message, and whether it was unhandled.",
+      "properties": {
+        "message": {
+          "description": "The error's message text.",
+          "title": "Message",
+          "type": "string"
+        },
+        "type": {
+          "description": "The error's type name, such as the exception class.",
+          "title": "Type",
+          "type": "string"
+        },
+        "unhandled": {
+          "description": "Whether the error escaped the agent unhandled and ended the run.",
+          "title": "Unhandled",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "message",
+        "unhandled"
+      ],
+      "title": "EventError",
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "ModelInfo": {
+      "additionalProperties": false,
+      "description": "The language model behind the run; both the provider and the name are optional (AC-5.1).",
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The model's name, when known.",
+          "title": "Name"
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The model provider's name, when known.",
+          "title": "Provider"
+        }
+      },
+      "title": "ModelInfo",
+      "type": "object"
+    },
+    "RedactionState": {
+      "additionalProperties": false,
+      "description": "What redaction has done to this Trace (AD-10; PRD AC-31.2).\n\n``paths`` are the configured rule strings that matched; ``env_names`` are the names\n(never the values) of the environment variables whose values were scrubbed. A Trace\nnobody redacted carries ``applied=False`` with empty lists.",
+      "properties": {
+        "applied": {
+          "default": false,
+          "description": "Whether redaction has been applied to this Trace.",
+          "title": "Applied",
+          "type": "boolean"
+        },
+        "env_names": {
+          "description": "The names, never the values, of the environment variables whose values were scrubbed.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Env Names",
+          "type": "array"
+        },
+        "paths": {
+          "description": "The configured redaction keys and paths that matched a value.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Paths",
+          "type": "array"
+        }
+      },
+      "title": "RedactionState",
+      "type": "object"
+    },
+    "ToolRef": {
+      "additionalProperties": false,
+      "description": "The tool a ``tool_call`` or ``tool_result`` event refers to (AD-5).\n\n``call_id`` links a result to its call when the adapter provides one; without it the\nengine links a result to the nearest preceding ``tool_call`` with the same name.",
+      "properties": {
+        "call_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The adapter's identifier linking a tool_result to its tool_call, if any.",
+          "title": "Call Id"
+        },
+        "name": {
+          "description": "The tool's name as the agent invoked it.",
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "ToolRef",
+      "type": "object"
+    },
+    "TraceEvent": {
+      "additionalProperties": false,
+      "description": "One recorded event (spine Schemas seed; AD-5).\n\n``seq`` is the event's 0-based position and the only thing evidence points at. Which\noptional fields an event carries depends on its ``type``: ``tool_call`` carries\n``tool`` and ``arguments``, ``tool_result`` carries ``tool``, ``result`` and\n``status``, ``agent_finished`` carries the Final Output in ``output``, ``exception``\ncarries ``error``. ``redacted`` marks an event the scrubber changed; ``metadata`` is\nfree-form adapter data.",
+      "properties": {
+        "arguments": {
+          "$ref": "#/$defs/JsonValue",
+          "default": null,
+          "description": "The arguments passed to the tool on a tool_call."
+        },
+        "duration_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How long the event took, in whole milliseconds.",
+          "title": "Duration Ms"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EventError"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The error an exception or failed event records."
+        },
+        "metadata": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "description": "Free-form adapter metadata about the event.",
+          "title": "Metadata",
+          "type": "object"
+        },
+        "output": {
+          "$ref": "#/$defs/JsonValue",
+          "default": null,
+          "description": "The Final Output of the run on an agent_finished event."
+        },
+        "redacted": {
+          "default": false,
+          "description": "Whether redaction changed a value in this event.",
+          "title": "Redacted",
+          "type": "boolean"
+        },
+        "result": {
+          "$ref": "#/$defs/JsonValue",
+          "default": null,
+          "description": "The value the tool returned on a tool_result."
+        },
+        "seq": {
+          "description": "The event's 0-based position in events; evidence points at this value.",
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The adapter's status word for the event, such as ok.",
+          "title": "Status"
+        },
+        "timestamp": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?(Z|[+-][0-9]{2}:[0-9]{2})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "When the event occurred, as an RFC 3339 string with an explicit offset.",
+          "title": "Timestamp"
+        },
+        "tool": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ToolRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The tool a tool_call or tool_result refers to."
+        },
+        "type": {
+          "description": "The event type, one of the eleven documented values.",
+          "enum": [
+            "agent_started",
+            "agent_finished",
+            "tool_call",
+            "tool_result",
+            "llm_request",
+            "llm_response",
+            "exception",
+            "approval_requested",
+            "approval_granted",
+            "approval_denied",
+            "custom"
+          ],
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "seq",
+        "type"
+      ],
+      "title": "TraceEvent",
+      "type": "object"
+    }
+  },
+  "$id": "urn:agentproof:schema:trace-v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One recorded run of an agent against a Scenario (``version`` 1; spine Schemas seed).\n\n``run_id``, ``started_at``, ``ended_at`` and ``environment`` are owned by the runner,\nwhich overwrites whatever an adapter put there (AD-9). ``events`` must carry\ncontiguous ``seq`` values starting at 0; the validator reports the first event whose\n``seq`` differs from its index, located at ``events.<index>.seq``.",
+  "properties": {
+    "adapter": {
+      "$ref": "#/$defs/AdapterInfo",
+      "description": "The adapter that produced this Trace."
+    },
+    "agent": {
+      "$ref": "#/$defs/AgentInfo",
+      "description": "The agent under test."
+    },
+    "capture": {
+      "$ref": "#/$defs/Capture",
+      "description": "The adapter's declaration of how completely it captured tool calls."
+    },
+    "ended_at": {
+      "description": "When the run ended, as an RFC 3339 string with an explicit offset.",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?(Z|[+-][0-9]{2}:[0-9]{2})$",
+      "title": "Ended At",
+      "type": "string"
+    },
+    "environment": {
+      "$ref": "#/$defs/Environment",
+      "description": "Allowlisted environment metadata filled by the runner."
+    },
+    "events": {
+      "description": "The recorded events in order; seq runs 0, 1, 2, ... without gaps.",
+      "items": {
+        "$ref": "#/$defs/TraceEvent"
+      },
+      "title": "Events",
+      "type": "array"
+    },
+    "model": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ModelInfo"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The language model behind the run, when known."
+    },
+    "redaction": {
+      "$ref": "#/$defs/RedactionState",
+      "description": "What redaction has been applied to this Trace."
+    },
+    "run_id": {
+      "description": "The run identifier the runner assigned.",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "scenario_id": {
+      "description": "The id of the Scenario this run executed.",
+      "title": "Scenario Id",
+      "type": "string"
+    },
+    "started_at": {
+      "description": "When the run started, as an RFC 3339 string with an explicit offset.",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?(Z|[+-][0-9]{2}:[0-9]{2})$",
+      "title": "Started At",
+      "type": "string"
+    },
+    "version": {
+      "description": "The Trace schema version, an integer independent of the package version.",
+      "enum": [
+        1
+      ],
+      "title": "Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "version",
+    "run_id",
+    "scenario_id",
+    "started_at",
+    "ended_at",
+    "agent",
+    "adapter",
+    "events"
+  ],
+  "title": "Trace",
+  "type": "object"
+}

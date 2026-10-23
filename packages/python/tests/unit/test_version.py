@@ -2,11 +2,9 @@
 
 import importlib.metadata
 import tomllib
-from pathlib import Path
 
 import agentproof
-
-PACKAGE_ROOT = Path(__file__).resolve().parents[2]
+from testsupport import PACKAGE_ROOT
 
 
 def test_version_equals_installed_metadata() -> None:
@@ -19,5 +17,6 @@ def test_version_equals_pyproject_version() -> None:
     assert agentproof.__version__ == pyproject_version
 
 
-def test_public_api_is_exactly_version() -> None:
-    assert agentproof.__all__ == ["__version__"]
+def test_version_is_in_the_public_api() -> None:
+    # The full name list is pinned in test_public_api.py.
+    assert "__version__" in agentproof.__all__

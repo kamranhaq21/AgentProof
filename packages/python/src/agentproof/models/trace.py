@@ -56,7 +56,7 @@ from pydantic import (
 from pydantic_core import InitErrorDetails, PydanticCustomError
 
 from agentproof.constants import RFC3339_WITH_OFFSET, SUPPORTED_VERSIONS
-from agentproof.models.common import JsonValue
+from agentproof.models.common import JsonValue, null_means_absent
 
 __all__ = [
     "EVENT_TYPES",
@@ -69,6 +69,7 @@ __all__ = [
     "EventType",
     "ModelInfo",
     "RedactionState",
+    "TIMESTAMP_PATTERN",
     "Timestamp",
     "ToolRef",
     "Trace",
@@ -188,32 +189,24 @@ def _require_finite[T: JsonValue](value: T) -> T:
     return value
 
 
-def _null_means_absent(model: type[BaseModel], data: Any) -> Any:
-    """Drop ``None`` values for fields that have a default, so ``null`` reads as absent.
-
-    AD-19 serializes absent optional fields as ``null``; without this a Trace written with
-    the full key set (``"capture": null``, ``"metadata": null``) would not read back.
-    Only dict input is touched, and only keys that name a field with a default are
-    dropped, so a ``null`` for a required field and an unknown key keep their normal
-    errors. Used as a ``model_validator(mode="before")`` by ``Trace`` and ``TraceEvent``;
-    the Suite models may hoist it later.
-    """
-    if not isinstance(data, dict):
-        return data
-    fields = model.model_fields
-    return {
-        key: value
-        for key, value in data.items()
-        if not (value is None and key in fields and not fields[key].is_required())
-    }
-
-
 TraceSchemaVersion = Annotated[
     int, BeforeValidator(_require_integer), AfterValidator(_require_supported_trace_version)
 ]
 """An exact integer that ``SUPPORTED_VERSIONS["trace"]`` lists (AD-3)."""
 
-Timestamp = Annotated[str, BeforeValidator(_require_timestamp)]
+TIMESTAMP_PATTERN: Final = f"^{RFC3339_WITH_OFFSET.pattern}$"
+"""The timestamp grammar as a JSON Schema ``pattern`` (AD-4): ``RFC3339_WITH_OFFSET``
+anchored at both ends, so an external validator rejects the naive timestamps the model
+rejects. The grammar uses only ``[0-9]``, counted repeats, groups, ``?`` and ``|``, which
+ECMA-262 and Python read alike. Exported through ``json_schema_extra`` rather than
+``Field(pattern=...)`` so pydantic-core runs no second regex and the error code stays
+``timestamp_format``."""
+
+Timestamp = Annotated[
+    str,
+    BeforeValidator(_require_timestamp),
+    Field(json_schema_extra={"pattern": TIMESTAMP_PATTERN}),
+]
 """An RFC 3339 string with an explicit offset or ``Z``, stored exactly as given (AD-3)."""
 
 # ``Field(ge=0)`` sits before the validator so the constraint lands on the integer schema
@@ -401,7 +394,7 @@ class TraceEvent(BaseModel):
     @classmethod
     def _null_is_absent(cls, data: Any) -> Any:
         """A ``null`` for a field with a default reads as the key being absent (AD-19)."""
-        return _null_means_absent(cls, data)
+        return null_means_absent(cls, data)
 
 
 class Trace(BaseModel):
@@ -452,7 +445,7 @@ class Trace(BaseModel):
     @classmethod
     def _null_is_absent(cls, data: Any) -> Any:
         """A ``null`` for a field with a default reads as the key being absent (AD-19)."""
-        return _null_means_absent(cls, data)
+        return null_means_absent(cls, data)
 
     @field_validator("events", mode="after")
     @classmethod

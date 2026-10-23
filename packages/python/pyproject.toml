@@ -26,9 +26,18 @@ dev = [
     "ruff>=0.17",
     "mypy>=2.4",
     "import-linter>=2.15",
+    # Type stubs for PyYAML so `mypy --strict` can check `loading.yaml_safe` (story 3.2);
+    # PyYAML ships none. A dev dependency only; never part of the shipped wheel.
+    "types-pyyaml>=6.0.12",
+    # Validate the fixtures against the generated JSON Schemas in tests (story 2.5,
+    # AD-4). Dev only: the product validates with Pydantic and never imports these
+    # (AD-16); tests/unit/test_schema_drift.py proves it.
+    "jsonschema>=4.26",
+    "referencing>=0.36",
     # Workspace member providing `uv run check` (story 1.2, ARCH-4). A dev
     # dependency only; it is never part of the shipped `agentproof` wheel.
     "agentproof-devtools",
+    "hypothesis>=6.170",
 ]
 
 [tool.uv.workspace]
@@ -49,10 +58,14 @@ exclude = ["/devtools", "/tests"]
 [tool.ruff]
 line-length = 100
 # Both source roots, so ruff sorts `agentproof_devtools` as first-party like `agentproof`.
-src = [".", "src", "devtools/src"]
+src = [".", "src", "devtools/src", "tests"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "TID"]
+# Architecture AD-19 (story 3.2, epic-1 retrospective finding 4): the flake8-bandit rules
+# for `exec` (S102), `pickle.loads` (S301), `marshal` (S302), `eval` (S307) and `yaml.load`
+# without the safe loader (S506) apply to every file, shell packages, devtools and tests
+# included; nothing under `src` may ignore them.
+select = ["E", "F", "I", "UP", "B", "TID", "S102", "S301", "S302", "S307", "S506"]
 
 # Architecture AD-1: core code never touches the clock, the environment, the network,
 # the filesystem, or concurrency. TID251 bans the importable names; the AST purity
@@ -72,12 +85,20 @@ select = ["E", "F", "I", "UP", "B", "TID"]
 "subprocess".msg = "core code never shells out (AD-1)"
 "threading".msg = "core code is single-threaded and pure (AD-1); concurrency belongs to the shell"
 "asyncio".msg = "core code is synchronous and pure (AD-1); concurrency belongs to the shell"
+# Architecture AD-19: the only deserializers are `loading.yaml_safe` and `json.loads`.
+"pickle".msg = "pickle deserializes arbitrary objects (AD-19); artifacts are JSON and YAML only"
+"marshal".msg = "marshal deserializes code objects (AD-19); artifacts are JSON and YAML only"
+"shelve".msg = "shelve is pickle-backed (AD-19); artifacts are JSON and YAML only"
 
 [tool.ruff.lint.per-file-ignores]
-# Effectful shell packages, the devtools workspace member, and tests may use the names.
+# Effectful shell packages, the devtools workspace member, and tests may use the AD-1
+# names. The AD-19 S rules above are not listed here for anything under `src`.
 "src/agentproof/{adapters,runner,io,cli,testing}/**" = ["TID251"]
 "devtools/**" = ["TID251"]
 "tests/**" = ["TID251"]
+# This test deliberately round-trips an `InputError` through `pickle.loads` to prove the
+# exception rebuilds from its `args` (story 2.1); it never unpickles input data.
+"tests/unit/test_errors_taxonomy.py" = ["S301"]
 
 [tool.mypy]
 strict = true
@@ -86,3 +107,15 @@ files = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# `tests/unit/cli` and `tests/integration/cli` share a directory name; importlib mode gives
+# each test module a unique name from its path, so no `__init__.py` files are needed to
+# tell them apart (story 3.1).
+addopts = ["--import-mode=importlib"]
+# `tests/testsupport.py` (the repository roots and the subprocess helper) is imported by
+# name; importlib mode does not put `tests/` on `sys.path`, so it is listed here (story 2.7).
+pythonpath = ["tests"]
+markers = [
+    # Architecture AD-17: the CLI subprocess tests are the only tests allowed to spawn a
+    # process once the conftest guard exists; the marker names them today.
+    "allow_subprocess: runs the agentproof console script as a subprocess",
+]

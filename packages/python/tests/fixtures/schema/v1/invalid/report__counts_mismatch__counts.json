@@ -1,0 +1,190 @@
+{
+  "counts": {
+    "error": 0,
+    "failed": 0,
+    "passed": 3,
+    "skipped": 0
+  },
+  "created_at": "2026-10-22T13:05:02+00:00",
+  "defaults": {
+    "adapter": "fixture",
+    "compare": {
+      "include_arguments": []
+    },
+    "fail_on_missing_trace": true,
+    "fixture": {
+      "deterministic": true
+    },
+    "redact": {
+      "env": [
+        "OPENAI_API_KEY"
+      ],
+      "keys": [],
+      "paths": []
+    }
+  },
+  "execution_failed": false,
+  "package_version": "0.1.0",
+  "run_id": "fixture-reject-over-limit",
+  "scenarios": [
+    {
+      "assertions": [
+        {
+          "assertion_id": "tool_not_called-0",
+          "detail": {},
+          "evidence": [
+            1
+          ],
+          "message": "approve_expense was called (capture: complete)",
+          "status": "failed",
+          "type": "tool_not_called"
+        },
+        {
+          "assertion_id": "tool_call_count-1",
+          "detail": {},
+          "evidence": [
+            1
+          ],
+          "message": "reject_expense was called 1 time (equals 1)",
+          "status": "passed",
+          "type": "tool_call_count"
+        },
+        {
+          "assertion_id": "says-rejected",
+          "detail": {},
+          "evidence": [
+            3
+          ],
+          "message": "final output contains \"rejected\"",
+          "status": "passed",
+          "type": "final_output_contains"
+        }
+      ],
+      "cost": null,
+      "counts": {
+        "error": 0,
+        "failed": 1,
+        "passed": 2,
+        "skipped": 0
+      },
+      "duration_ms": 2000,
+      "execution_error": null,
+      "scenario_id": "reject-over-limit",
+      "skip_reason": null,
+      "status": "failed",
+      "trace": {
+        "adapter": {
+          "name": "fixture",
+          "version": "0.1.0"
+        },
+        "agent": {
+          "name": "expense-agent",
+          "version": "1.2.0"
+        },
+        "capture": {
+          "tool_calls": "complete"
+        },
+        "ended_at": "2026-10-22T13:05:02+00:00",
+        "environment": {
+          "os": "Linux",
+          "package_version": "0.1.0",
+          "python_version": "3.12.15",
+          "source_revision": null
+        },
+        "events": [
+          {
+            "arguments": null,
+            "duration_ms": null,
+            "error": null,
+            "metadata": {},
+            "output": null,
+            "redacted": false,
+            "result": null,
+            "seq": 0,
+            "status": null,
+            "timestamp": "2026-10-22T13:05:00+00:00",
+            "tool": null,
+            "type": "agent_started"
+          },
+          {
+            "arguments": {
+              "amount": 5000,
+              "api_key": "[REDACTED]"
+            },
+            "duration_ms": null,
+            "error": null,
+            "metadata": {},
+            "output": null,
+            "redacted": true,
+            "result": null,
+            "seq": 1,
+            "status": null,
+            "timestamp": "2026-10-22T13:05:00.412+00:00",
+            "tool": {
+              "call_id": "c1",
+              "name": "reject_expense"
+            },
+            "type": "tool_call"
+          },
+          {
+            "arguments": null,
+            "duration_ms": 750,
+            "error": null,
+            "metadata": {},
+            "output": null,
+            "redacted": false,
+            "result": {
+              "ok": true
+            },
+            "seq": 2,
+            "status": "ok",
+            "timestamp": "2026-10-22T13:05:01.162+00:00",
+            "tool": {
+              "call_id": "c1",
+              "name": "reject_expense"
+            },
+            "type": "tool_result"
+          },
+          {
+            "arguments": null,
+            "duration_ms": null,
+            "error": null,
+            "metadata": {},
+            "output": "Expense rejected: over limit",
+            "redacted": false,
+            "result": null,
+            "seq": 3,
+            "status": null,
+            "timestamp": "2026-10-22T13:05:02+00:00",
+            "tool": null,
+            "type": "agent_finished"
+          }
+        ],
+        "model": {
+          "name": null,
+          "provider": null
+        },
+        "redaction": {
+          "applied": true,
+          "env_names": [
+            "OPENAI_API_KEY"
+          ],
+          "paths": [
+            "arguments.api_key"
+          ]
+        },
+        "run_id": "fixture-reject-over-limit",
+        "scenario_id": "reject-over-limit",
+        "started_at": "2026-10-22T13:05:00+00:00",
+        "version": 1
+      }
+    }
+  ],
+  "schema_versions": {
+    "suite": 1,
+    "trace": 1
+  },
+  "suite_id": "expense-agent",
+  "suite_status": "failed",
+  "version": 1
+}

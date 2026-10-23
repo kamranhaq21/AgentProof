@@ -188,6 +188,17 @@ def test_main_exits_two_on_unparsable_file(
     assert "cannot parse" in capsys.readouterr().err
 
 
+def test_main_exits_two_on_a_file_that_is_not_utf8(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (tmp_path / "latin1.py").write_bytes(b'x = "caf\xe9"\n')
+    assert main([str(tmp_path / "latin1.py")]) == 2
+    captured = capsys.readouterr()
+    assert "cannot parse" in captured.err
+    assert "latin1.py" in captured.err
+    assert captured.out == ""
+
+
 def test_main_reads_sys_argv_when_called_without_arguments(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

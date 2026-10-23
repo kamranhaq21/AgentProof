@@ -1,0 +1,9 @@
+version: 1
+suite: expense-agent
+scenarios:
+  - id: reject-over-limit
+    input: {expense_amount: 5000}
+    id: duplicate-id
+    assertions:
+      - type: tool_not_called
+        tool: approve_expense
