@@ -3,7 +3,7 @@ title: 'CI runs the check entry point on Linux and Windows across Python 3.12 to
 type: 'feature'
 ticket: '4'
 created: '2026-10-23'
-status: 'in-progress'
+status: 'built'
 baseline_revision: 'bd292752290c78f4baa01bac40127d01027dac65'
 route: 'full'
 route_source: 'pinned'
@@ -58,7 +58,7 @@ context: []
 - [x] `packages/python/tests/unit/test_workflow_pins.py` -- pin, permission, matrix, and no-secrets assertions -- criterion 2
 - [x] `CONTRIBUTING.md` -- branch rule and present-tense CI sentence -- criterion 4
 - [x] local verification -- `uv run check` green (the new test included); `uv sync --locked` succeeds from a fresh venv to prove the lock is current
-- [ ] orchestrator -- push, pull request, red-then-green proof, branch protection, evidence recorded -- criteria 1, 3, 4
+- [x] orchestrator -- push, pull request, red-then-green proof, branch protection, evidence recorded -- criteria 1, 3, 4
 
 **Acceptance Criteria:**
 - Given the pull request, when CI runs, then eight `check` jobs appear and pass.
@@ -67,6 +67,8 @@ context: []
 - Given `main`, when its protection is read, then the CI contexts are required and pull requests are required, and CONTRIBUTING says so.
 
 ## Implementation Notes
+
+- 2026-10-23, orchestrator (GitHub steps): pushed `story/1-4-ci-workflow` and opened pull request #1 against `backlog` (https://github.com/kamranhaq21/AgentProof/pull/1). Run 39896988588 on commit 606c0c2: all eight `check` jobs passed, including both 3.15 cells (pyyaml built from sdist on the runners). Run 39897319496 on 1c5aaa3 (`assert False`): all eight failed at `ruff check` (B011), proving the gate order. Run 39897818215 on c029ce8 (`assert 1 == 2`): all eight failed at `pytest`, proving the criterion's stage. Run 39897969954 on c0c7b63 (test removed): all eight passed. Branch protection applied to `main` through `gh api`: eight required contexts `check (<os>, <python>)`, strict status checks, pull request required with zero approvals, administrators not enforced; read back from the API as applied. Every push waited for the previous run to finish so `cancel-in-progress` never cancelled a proof run.
 
 **2026-10-23, implementation subagent (files, local verification; no git writes).**
 
@@ -90,6 +92,18 @@ context: []
 ## Plan Change Log
 
 ## Review Triage Log
+
+### Review pass 1 (quick lens), 2026-10-23
+
+Verdicts: high 0, medium 3, low 1, false 0, maybe-false 0, plus one "evidence pending" item.
+
+| Finding | Verdict | Route | Evidence |
+| --- | --- | --- | --- |
+| `assert False` is stopped by ruff B011, so the red run fails at `ruff check`, not `pytest` | medium | patch (orchestrator) | True: run 39896988588's second attempt failed at `ruff check` with B011; a ruff-clean `assert 1 == 2` was pushed as commit c029ce8 to prove the `pytest` stage. The first red run still stands as proof the gate order holds. |
+| `cancel-in-progress` can cancel the red run if the revert is pushed early | low | process | True; every push waited for the previous run to finish. |
+| CONTRIBUTING overstated the protection ("never skipped") and misattributed bullets to spec §13.2 | medium | patch | True; reworded: administrators can bypass, everyone else cannot; attribution to the maintainer's 2026-10-22 decisions added. |
+| The pin test froze this story's job and action set as a repository invariant (only workflow, only job, last step) | medium | patch | True; story 1.6 adds jobs. Assertions relaxed to: workflow exists, `check` job has the required shape, every action in every job is pinned, no secrets anywhere. |
+| Orchestrator criteria unevidenced at review time | pending | evidence below | Recorded in Implementation Notes once the green rerun and the protection read-back are in hand. |
 
 ## Verification
 
