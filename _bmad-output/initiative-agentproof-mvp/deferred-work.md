@@ -30,3 +30,6 @@
 - source: story 3.2 quick-lens review, 2026-10-23, finding 7
   summary: the YAML loader fills `Violation.field` with `<line>:<column>` while `errors.py` documents it as the dotted model path; story 3.3 (parse_suite) mixes both in one list, so it must fix the convention (for example a separate `line` on Violation, or a documented rule that a field matching `\d+:\d+` is a position) and update the errors.py docstring.
   owner: story 3.3.
+- source: story 3.1 review, 2026-10-23
+  summary: the CLI error handler prints `str(exc)` for exit 3 and 4, the traceback under `--verbose`, and unwrapped violation messages without running `scrub_text`, so a secret value inside an exception message reaches stderr. Strict `xfail` tests (`test_a_planted_secret_never_reaches_the_output` in `tests/unit/cli/test_error_handler.py`) pin the gap; when `io.console` scrubs every print they XPASS and fail, and must be flipped to plain tests.
+  owner: story 3.5 (console scrubber and logging filter).

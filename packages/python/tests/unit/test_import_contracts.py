@@ -131,14 +131,35 @@ def test_upward_import_from_models_to_cli_breaks_the_contracts(tree: Path) -> No
     assert "Contracts: 7 kept, 0 broken." not in linted.stdout
 
 
-def test_cli_importing_models_directly_breaks_the_cli_contract(tree: Path) -> None:
-    """The layers allow cli -> models; the forbidden cli contract is what must catch it."""
-    _append(tree, "cli/app.py", "\nimport agentproof.models\n")
+def test_cli_importing_engine_directly_breaks_the_cli_contract(tree: Path) -> None:
+    """The layers allow cli -> engine; the forbidden cli contract is what must catch it."""
+    _append(tree, "cli/app.py", "\nimport agentproof.engine\n")
     linted = lint_imports(tree)
     assert linted.returncode != 0
-    assert "cli imports only runner and io BROKEN" in linted.stdout
+    assert "cli imports only runner, io, errors, constants, models BROKEN" in linted.stdout
     assert "agentproof.cli.app" in linted.stdout
-    assert "agentproof.models" in linted.stdout
+    assert "agentproof.engine" in linted.stdout
+
+
+def test_cli_may_import_the_public_api_modules_directly() -> None:
+    """Story 3.1: AD-2 lets cli import the public API (AD-15), so `errors`, `constants`,
+    and `models` are not forbidden; the clean-copy test above proves the live imports in
+    `cli/app.py`, `cli/exit_codes.py`, and `cli/commands/version.py` keep every contract."""
+    forbidden = _cli_forbidden_modules(IMPORTLINTER.read_text(encoding="utf-8"))
+    assert {"agentproof.errors", "agentproof.constants", "agentproof.models"}.isdisjoint(forbidden)
+    assert {"agentproof.engine", "agentproof.loading", "agentproof.testing"} <= forbidden
+
+
+def _cli_forbidden_modules(config: str) -> set[str]:
+    """The `forbidden_modules` of the `cli` contract, read from the config text."""
+    section = config.split("[importlinter:contract:cli]", 1)[1].split("[importlinter:", 1)[0]
+    body = section.split("forbidden_modules =", 1)[1]
+    modules: set[str] = set()
+    for line in body.splitlines()[1:]:
+        if not line.startswith(" "):
+            break
+        modules.add(line.strip())
+    return modules
 
 
 @pytest.mark.parametrize(

@@ -148,16 +148,27 @@ def test_sdist_carries_the_project_but_not_devtools_or_tests(tmp_path: Path) -> 
     assert excluded == [] and "tests" not in inside, excluded
 
 
-def test_version_prints_pyproject_version_and_exits_zero(installed_cli: Path) -> None:
+def test_version_prints_pyproject_version_and_schema_versions_and_exits_zero(
+    installed_cli: Path,
+) -> None:
+    """Story 3.1 criterion 4 (PRD AC-30.2) against the installed wheel, not the source tree."""
     result = _run([str(installed_cli), "version"], check=False)
     assert result.returncode == 0, result.stderr
-    assert result.stdout.splitlines() == [_pyproject_version()]
+    assert result.stdout.splitlines() == [
+        f"agentproof {_pyproject_version()}",
+        "suite schema versions: 1",
+        "trace schema versions: 1",
+        "report schema versions: 1",
+    ]
+    assert result.stderr == ""
 
 
-def test_help_lists_only_version(installed_cli: Path) -> None:
+def test_help_lists_only_version_and_the_global_options(installed_cli: Path) -> None:
     result = _run([str(installed_cli), "--help"], check=False)
     assert result.returncode == 0, result.stderr
     assert _commands_listed_in_help(result.stdout) == ["version"]
+    assert "--verbose" in result.stdout
+    assert "--no-color" in result.stdout
 
 
 def test_unknown_command_exits_nonzero(installed_cli: Path) -> None:

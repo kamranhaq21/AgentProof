@@ -81,8 +81,12 @@ allow_indirect_imports = True
 
 # Direct imports only: `cli` may import the package top level, which will itself
 # import core modules once the public API exists (AD-15), so indirect chains are legal.
+# `errors`, `constants`, and `models` are public API (AD-15: the `errors` module,
+# `SUPPORTED_VERSIONS`, `SuiteOutcome`, `Comparison`), which AD-2 lets `cli` import; the
+# error handler and `cli.exit_codes` need them directly (story 3.1; epic 1 retrospective
+# A5.2). Every other core package stays reachable only through the public API.
 [importlinter:contract:cli]
-name = cli imports only runner and io
+name = cli imports only runner, io, errors, constants, models
 type = forbidden
 source_modules =
     agentproof.cli
@@ -90,11 +94,8 @@ forbidden_modules =
     agentproof.adapters
     agentproof.assertions
     agentproof.compare
-    agentproof.constants
     agentproof.engine
-    agentproof.errors
     agentproof.loading
-    agentproof.models
     agentproof.redaction
     agentproof.reports
     agentproof.testing
