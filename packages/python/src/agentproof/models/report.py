@@ -43,7 +43,7 @@ from pydantic_core import PydanticCustomError
 
 from agentproof.constants import STATEMENTS, SUPPORTED_VERSIONS
 from agentproof.models.assertions import Count
-from agentproof.models.common import MODEL_CONFIG, JsonValue, Status, _null_means_absent
+from agentproof.models.common import MODEL_CONFIG, JsonValue, Status, null_means_absent
 from agentproof.models.result import (
     Cost,
     Counts,
@@ -361,4 +361,4 @@ class Comparison(BaseModel):
     @classmethod
     def _null_is_absent(cls, data: Any) -> Any:
         """A ``null`` for a field with a default reads as the key being absent (AD-19)."""
-        return _null_means_absent(cls, data)
+        return null_means_absent(cls, data)

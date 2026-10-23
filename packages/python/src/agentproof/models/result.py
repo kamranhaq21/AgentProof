@@ -38,7 +38,7 @@ from pydantic import BaseModel, Field, ValidationError, model_validator
 from pydantic_core import InitErrorDetails, PydanticCustomError
 
 from agentproof.models.assertions import Count
-from agentproof.models.common import MODEL_CONFIG, JsonValue, Status, _null_means_absent
+from agentproof.models.common import MODEL_CONFIG, JsonValue, Status, null_means_absent
 from agentproof.models.trace import Trace
 
 __all__ = [
@@ -232,7 +232,7 @@ class AssertionResult(BaseModel):
     @classmethod
     def _null_is_absent(cls, data: Any) -> Any:
         """A ``null`` for a field with a default reads as the key being absent (AD-19)."""
-        return _null_means_absent(cls, data)
+        return null_means_absent(cls, data)
 
 
 class ScenarioResult(BaseModel):
@@ -287,7 +287,7 @@ class ScenarioResult(BaseModel):
     @classmethod
     def _null_is_absent(cls, data: Any) -> Any:
         """A ``null`` for a field with a default reads as the key being absent (AD-19)."""
-        return _null_means_absent(cls, data)
+        return null_means_absent(cls, data)
 
     @model_validator(mode="after")
     def _results_are_consistent(self) -> Self:

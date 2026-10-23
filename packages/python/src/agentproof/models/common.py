@@ -3,7 +3,7 @@ the one Pydantic configuration and null-handling helper the serialized models us
 
 The typing names (``JsonValue``, ``Status``) are plain; the models, the assertions, the
 serializer, and the engine all import them so that the same value means the same thing in
-every module. ``MODEL_CONFIG`` and ``_null_means_absent`` live here so that no model module
+every module. ``MODEL_CONFIG`` and ``null_means_absent`` live here so that no model module
 imports a sibling model module just to reach them. The module imports only the standard
 library and Pydantic (AD-1, AD-2).
 """
@@ -28,7 +28,7 @@ construction, unknown fields rejected naming the field path, NaN and infinity re
 and no model-level ``strict`` so Python-mode validation of a dict is the only mode."""
 
 
-def _null_means_absent(model: type[BaseModel], data: Any) -> Any:
+def null_means_absent(model: type[BaseModel], data: Any) -> Any:
     """Drop ``None`` values for fields that have a default, so ``null`` reads as absent.
 
     AD-19 serializes absent optional fields as ``null``; without this a Trace written with

@@ -74,7 +74,7 @@ F1 = (
 )
 # Finding F2: see the Implementation Notes of the story 2.6 plan and deferred-work.md.
 F2 = (
-    "F2: _null_means_absent is applied only to Trace and TraceEvent, so an explicit null for a "
+    "F2: null_means_absent is applied only to Trace and TraceEvent, so an explicit null for a "
     "nested field with a non-null default (capture.tool_calls, redaction.*) is rejected (AD-19)"
 )
 
@@ -248,7 +248,7 @@ def _optional_fields(model: type[BaseModel]) -> list[str]:
 def _null_for_absent(trace: JsonObject) -> JsonObject:
     """A copy of ``trace`` with an explicit ``null`` for every optional key it leaves out.
 
-    Covers the Trace- and event-level fields (``_null_means_absent`` drops those whatever
+    Covers the Trace- and event-level fields (``null_means_absent`` drops those whatever
     their default) and the nested fields whose default is already ``None``.
     """
     data = copy.deepcopy(trace)
