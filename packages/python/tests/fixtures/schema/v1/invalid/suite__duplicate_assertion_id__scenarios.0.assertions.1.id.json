@@ -1,0 +1,21 @@
+{
+  "scenarios": [
+    {
+      "assertions": [
+        {
+          "tool": "lookup",
+          "type": "tool_called"
+        },
+        {
+          "id": "tool_called-0",
+          "tool": "x",
+          "type": "tool_called"
+        }
+      ],
+      "id": "only",
+      "input": {}
+    }
+  ],
+  "suite": "minimal",
+  "version": 1
+}
