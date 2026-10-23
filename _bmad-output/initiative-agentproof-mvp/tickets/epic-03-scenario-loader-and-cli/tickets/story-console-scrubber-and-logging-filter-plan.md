@@ -3,7 +3,7 @@ title: 'Console scrubber and logging filter'
 type: 'feature'
 ticket: '5'
 created: '2026-10-23'
-status: in-progress
+status: 'built'
 baseline_revision: 'ec8fbb6b5fd85438398a16ec25ec02134c8dc29b'
 route: 'full'
 route_source: 'pinned'
