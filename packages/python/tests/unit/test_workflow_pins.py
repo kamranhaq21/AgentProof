@@ -245,14 +245,16 @@ def test_smoke_job_installs_the_uploaded_wheel_by_path_on_both_runners() -> None
     installs = [step["run"] for step in run_steps if "pip install" in step["run"]]
     assert installs == ["uv pip install --python .smoke dist/*.whl"]
     assert not any(re.search(r"--index|--extra-index|-i ", step["run"]) for step in run_steps)
-    # The installed console script runs, on either venv layout, and its output is
-    # compared with pyproject.toml; an empty expectation fails rather than matching empty.
+    # The installed console script runs, on either venv layout, and the first line of
+    # `agentproof version` (`agentproof <version>`; story 3.1 adds the schema-version
+    # lines after it) is compared with pyproject.toml; an empty expectation fails rather
+    # than matching empty.
     verify = run_steps[-1]["run"]
     assert "exe=.smoke/bin/agentproof\n" in verify
     assert '[ -x "$exe" ] || exe=.smoke/Scripts/agentproof.exe' in verify
-    assert """actual="$("$exe" version | tr -d '\\r')\"""" in verify
+    assert """actual="$("$exe" version | tr -d '\\r' | head -n1)\"""" in verify
     assert "tr -d '\\r' < packages/python/pyproject.toml" in verify
-    assert 'test -n "$expected" && test "$actual" = "$expected"' in verify
+    assert 'test -n "$expected" && test "$actual" = "agentproof $expected"' in verify
 
 
 def test_audit_job_runs_pip_audit_strictly_against_the_exported_lock() -> None:

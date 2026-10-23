@@ -1,0 +1,596 @@
+{
+  "$defs": {
+    "CompareDefaults": {
+      "additionalProperties": false,
+      "description": "``defaults.compare``: what a Comparison looks at beyond statuses and tool sequences.\n\n``include_arguments`` lists ``<tool>.<argument path>`` entries, for example\n``approve_expense.amount``; by default no arguments are compared (PRD AC-26.5).",
+      "properties": {
+        "include_arguments": {
+          "default": [],
+          "description": "The <tool>.<argument path> entries a Comparison compares, such as approve_expense.amount; empty by default.",
+          "items": {
+            "pattern": "^[^.\\s]+(\\.[^.\\s]+)*$",
+            "type": "string"
+          },
+          "title": "Include Arguments",
+          "type": "array"
+        }
+      },
+      "title": "CompareDefaults",
+      "type": "object"
+    },
+    "FinalOutputContains": {
+      "additionalProperties": false,
+      "description": "PRD FR-16: the Final Output exists and contains ``value`` as a literal substring.\n\nStructured Final Output is matched against its compact Canonical form (AD-11).\n``value`` is non-empty; the empty string is a substring of everything.",
+      "properties": {
+        "case_sensitive": {
+          "default": true,
+          "description": "Whether the substring match is case-sensitive.",
+          "title": "Case Sensitive",
+          "type": "boolean"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The Assertion id every Assertion Result carries; defaults to <type>-<index> with the 0-based position in the Scenario's assertions list.",
+          "title": "Id"
+        },
+        "type": {
+          "const": "final_output_contains",
+          "description": "The assertion type: final_output_contains.",
+          "title": "Type",
+          "type": "string"
+        },
+        "value": {
+          "description": "The literal substring the Final Output must contain; structured output is matched in its compact Canonical form.",
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "value"
+      ],
+      "title": "FinalOutputContains",
+      "type": "object"
+    },
+    "FixtureDefaults": {
+      "additionalProperties": false,
+      "description": "``defaults.fixture``: how the Fixture Agent runs (AD-9; ARCH-5).\n\nWith ``deterministic`` the runner derives ``run_id`` (``fixture-<scenario id>``) and\nthe timestamps from the fixture Trace instead of the clock, so repeated runs write\nbyte-identical artifacts.",
+      "properties": {
+        "deterministic": {
+          "default": false,
+          "description": "Whether the runner derives run_id and timestamps from the fixture Trace instead of the clock, so repeated runs write byte-identical artifacts.",
+          "title": "Deterministic",
+          "type": "boolean"
+        }
+      },
+      "title": "FixtureDefaults",
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "RedactDefaults": {
+      "additionalProperties": false,
+      "description": "``defaults.redact``: the Redaction rules (AD-10, PRD FR-31).\n\n``keys`` extends the built-in key set (``api_key``, ``token``, ``password``,\n``authorization``) and cannot remove from it; ``paths`` are dotted paths; ``env`` names\nenvironment variables whose current values the runner scrubs. Names only, never\nvalues.",
+      "properties": {
+        "env": {
+          "default": [],
+          "description": "Names of environment variables whose current values are scrubbed from every artifact; names only, never values.",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Env",
+          "type": "array"
+        },
+        "keys": {
+          "default": [],
+          "description": "Additional key names whose values are redacted wherever they appear, extending the built-in set (api_key, token, password, authorization).",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Keys",
+          "type": "array"
+        },
+        "paths": {
+          "default": [],
+          "description": "Dotted paths into event payloads whose values are redacted.",
+          "items": {
+            "pattern": "^[^.\\s]+(\\.[^.\\s]+)*$",
+            "type": "string"
+          },
+          "title": "Paths",
+          "type": "array"
+        }
+      },
+      "title": "RedactDefaults",
+      "type": "object"
+    },
+    "Scenario": {
+      "additionalProperties": false,
+      "description": "One Scenario: an id, an input for the adapter, an optional fixture Trace, Assertions.\n\n``skip`` carries a reason and its presence means the Scenario is skipped (AD-6), so a\npresent ``skip`` must be a reason string; absent it is ``None``. ``trace`` is a path\nstring relative to the Suite file, the fixture source and the replay default; the\nshell resolves it. ``assertions`` has at least one item and every item carries an id\nafter validation. ``input`` is a plain dict and is not deep-frozen.",
+      "properties": {
+        "assertions": {
+          "description": "The Assertions evaluated against the Scenario's Trace; at least one.",
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "final_output_contains": "#/$defs/FinalOutputContains",
+                "tool_arguments_match": "#/$defs/ToolArgumentsMatch",
+                "tool_call_count": "#/$defs/ToolCallCount",
+                "tool_called": "#/$defs/ToolCalled",
+                "tool_not_called": "#/$defs/ToolNotCalled",
+                "tool_order": "#/$defs/ToolOrder"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/ToolCalled"
+              },
+              {
+                "$ref": "#/$defs/ToolNotCalled"
+              },
+              {
+                "$ref": "#/$defs/ToolCallCount"
+              },
+              {
+                "$ref": "#/$defs/ToolArgumentsMatch"
+              },
+              {
+                "$ref": "#/$defs/ToolOrder"
+              },
+              {
+                "$ref": "#/$defs/FinalOutputContains"
+              }
+            ]
+          },
+          "minItems": 1,
+          "title": "Assertions",
+          "type": "array"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A free-text description of the Scenario.",
+          "title": "Description"
+        },
+        "id": {
+          "description": "The Scenario id: 1 to 64 letters, digits, '.', '_' or '-', not starting with punctuation, not a Windows device name, unique in the Suite ignoring case.",
+          "title": "Id",
+          "type": "string"
+        },
+        "input": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "description": "The JSON object passed to the adapter as the Scenario's input.",
+          "title": "Input",
+          "type": "object"
+        },
+        "skip": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The reason the Scenario is skipped; its presence means skipped.",
+          "title": "Skip"
+        },
+        "trace": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Path of the fixture Trace, relative to the Suite file; the Fixture Agent's source and the replay default.",
+          "title": "Trace"
+        }
+      },
+      "required": [
+        "id",
+        "input",
+        "assertions"
+      ],
+      "title": "Scenario",
+      "type": "object"
+    },
+    "SuiteDefaults": {
+      "additionalProperties": false,
+      "description": "Suite-level settings every Scenario inherits (PRD Glossary \"Suite defaults\").\n\nEvery field is optional in YAML; the Report snapshots the whole model with every\nfield written (AD-19), so an absent section serializes as its defaults.",
+      "properties": {
+        "adapter": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The adapter name or pkg.module:ClassName that runs the Scenarios; the CLI --adapter option overrides it.",
+          "title": "Adapter"
+        },
+        "compare": {
+          "$ref": "#/$defs/CompareDefaults",
+          "description": "What a Comparison looks at beyond statuses and tool sequences."
+        },
+        "fail_on_missing_trace": {
+          "default": true,
+          "description": "Whether an absent Trace yields error results (true) or skipped results (false).",
+          "title": "Fail On Missing Trace",
+          "type": "boolean"
+        },
+        "fixture": {
+          "$ref": "#/$defs/FixtureDefaults",
+          "description": "How the Fixture Agent runs."
+        },
+        "redact": {
+          "$ref": "#/$defs/RedactDefaults",
+          "description": "The Redaction rules for every artifact."
+        }
+      },
+      "title": "SuiteDefaults",
+      "type": "object"
+    },
+    "ToolArgumentsMatch": {
+      "additionalProperties": false,
+      "description": "PRD FR-14: some ``tool_call`` for the tool matches every configured path exactly.\n\n``arguments`` maps a dotted argument path (``items.0.amount``; OQ-7) to the expected\nJSON value. At least one path is required; an empty mapping could never fail. The\nmapping is a plain dict and is not deep-frozen.",
+      "properties": {
+        "arguments": {
+          "description": "Dotted argument path (items.0.amount) to the expected JSON value; some tool_call must match every path exactly.",
+          "minProperties": 1,
+          "patternProperties": {
+            "^[^.\\s]+(\\.[^.\\s]+)*$": {
+              "$ref": "#/$defs/JsonValue"
+            }
+          },
+          "title": "Arguments",
+          "type": "object"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The Assertion id every Assertion Result carries; defaults to <type>-<index> with the 0-based position in the Scenario's assertions list.",
+          "title": "Id"
+        },
+        "tool": {
+          "description": "The tool name as the Trace records it.",
+          "minLength": 1,
+          "title": "Tool",
+          "type": "string"
+        },
+        "type": {
+          "const": "tool_arguments_match",
+          "description": "The assertion type: tool_arguments_match.",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "tool",
+        "arguments"
+      ],
+      "title": "ToolArgumentsMatch",
+      "type": "object"
+    },
+    "ToolCallCount": {
+      "additionalProperties": false,
+      "description": "PRD FR-13: the number of ``tool_call`` Events for the tool satisfies one comparison.\n\nExactly one of ``equals``, ``greater_than``, ``less_than`` is given (AC-13.2); each is\na non-negative integer.",
+      "properties": {
+        "equals": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Passes when the tool_call count equals this; one comparison is given.",
+          "title": "Equals"
+        },
+        "greater_than": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Passes when the tool_call count is greater than this; one comparison is given.",
+          "title": "Greater Than"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The Assertion id every Assertion Result carries; defaults to <type>-<index> with the 0-based position in the Scenario's assertions list.",
+          "title": "Id"
+        },
+        "less_than": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Passes when the tool_call count is less than this; one comparison is given.",
+          "title": "Less Than"
+        },
+        "tool": {
+          "description": "The tool name as the Trace records it.",
+          "minLength": 1,
+          "title": "Tool",
+          "type": "string"
+        },
+        "type": {
+          "const": "tool_call_count",
+          "description": "The assertion type: tool_call_count.",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "tool"
+      ],
+      "title": "ToolCallCount",
+      "type": "object"
+    },
+    "ToolCalled": {
+      "additionalProperties": false,
+      "description": "PRD FR-11: at least one ``tool_call`` Event with this tool name exists.",
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The Assertion id every Assertion Result carries; defaults to <type>-<index> with the 0-based position in the Scenario's assertions list.",
+          "title": "Id"
+        },
+        "tool": {
+          "description": "The tool name as the Trace records it.",
+          "minLength": 1,
+          "title": "Tool",
+          "type": "string"
+        },
+        "type": {
+          "const": "tool_called",
+          "description": "The assertion type: tool_called.",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "tool"
+      ],
+      "title": "ToolCalled",
+      "type": "object"
+    },
+    "ToolNotCalled": {
+      "additionalProperties": false,
+      "description": "PRD FR-12: no ``tool_call`` Event with this tool name exists.",
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The Assertion id every Assertion Result carries; defaults to <type>-<index> with the 0-based position in the Scenario's assertions list.",
+          "title": "Id"
+        },
+        "tool": {
+          "description": "The tool name as the Trace records it.",
+          "minLength": 1,
+          "title": "Tool",
+          "type": "string"
+        },
+        "type": {
+          "const": "tool_not_called",
+          "description": "The assertion type: tool_not_called.",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "tool"
+      ],
+      "title": "ToolNotCalled",
+      "type": "object"
+    },
+    "ToolOrder": {
+      "additionalProperties": false,
+      "description": "PRD FR-15: the listed tools occur as ``tool_call`` Events in this relative order.\n\nIntervening Events are allowed and the first occurrence of each tool is the one\nordered (AC-15.1, AC-15.4). At least one tool is required; an empty list could never\nfail.",
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The Assertion id every Assertion Result carries; defaults to <type>-<index> with the 0-based position in the Scenario's assertions list.",
+          "title": "Id"
+        },
+        "tools": {
+          "description": "Tool names in the required relative order; the first tool_call of each is the one ordered and other events may intervene.",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Tools",
+          "type": "array"
+        },
+        "type": {
+          "const": "tool_order",
+          "description": "The assertion type: tool_order.",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "tools"
+      ],
+      "title": "ToolOrder",
+      "type": "object"
+    }
+  },
+  "$id": "urn:agentproof:schema:suite-v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A Suite file: schema version, Suite id, optional description, defaults, Scenarios.\n\n``version`` is the integer schema version; ``1`` is the only value this model\naccepts and ``constants.SUPPORTED_VERSIONS[\"suite\"]`` lists it (AD-3). ``suite`` is an\nid with the same rule as Scenario ids. Scenario ids are unique when compared\ncase-insensitively so they are safe as file names on every platform (AC-2.5).",
+  "properties": {
+    "defaults": {
+      "$ref": "#/$defs/SuiteDefaults",
+      "description": "Suite-level settings every Scenario inherits; every section optional."
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "A free-text description of the Suite.",
+      "title": "Description"
+    },
+    "scenarios": {
+      "description": "The Scenarios of the Suite, in order; at least one.",
+      "items": {
+        "$ref": "#/$defs/Scenario"
+      },
+      "minItems": 1,
+      "title": "Scenarios",
+      "type": "array"
+    },
+    "suite": {
+      "description": "The Suite id, with the same rule as Scenario ids; names the Report's suite_id.",
+      "title": "Suite",
+      "type": "string"
+    },
+    "version": {
+      "const": 1,
+      "description": "The Suite schema version, an integer independent of the package version.",
+      "enum": [
+        1
+      ],
+      "title": "Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "version",
+    "suite",
+    "scenarios"
+  ],
+  "title": "Suite",
+  "type": "object"
+}

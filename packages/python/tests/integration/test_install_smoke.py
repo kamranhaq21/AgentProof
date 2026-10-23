@@ -6,6 +6,7 @@ it. Nothing here installs the package by name from an index.
 """
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -61,6 +62,14 @@ def _pyproject_version() -> str:
         return tomllib.load(handle)["project"]["version"]
 
 
+_ANSI = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
+
+
+def _strip_ansi(text: str) -> str:
+    """Remove ANSI escapes: CI sets GITHUB_ACTIONS, which makes Rich style even piped output."""
+    return _ANSI.sub("", text)
+
+
 # Characters Rich and click use to draw help panels: rounded, square, or ASCII borders.
 _BORDER_CHARS = frozenset("─│╭╮╯╰┌┐└┘├┤+-| ")
 
@@ -82,16 +91,40 @@ def _commands_listed_in_help(help_text: str) -> list[str]:
     except StopIteration:
         pytest.fail(f"no Commands section in --help output:\n{help_text}")
     names: list[str] = []
+    name_indent: int | None = None
     for line in lines[start + 1 :]:
         if _is_panel_border(line):
             break
-        body = line.strip().strip("│|").strip()
+        stripped = line.strip()
+        # Drop the panel's side border but keep the indent inside it; click's plain
+        # layout has no border, so its own indent is kept.
+        inner = stripped.strip("│|") if stripped[:1] in ("│", "|") else line.rstrip()
+        body = inner.strip()
         if not body:
             if names:
                 break
             continue
+        indent = len(inner) - len(inner.lstrip())
+        if name_indent is None:
+            name_indent = indent
+        if indent > name_indent:
+            continue  # a wrapped description continues under the description column
         names.append(body.split()[0])
     return names
+
+
+def test_commands_listed_skips_wrapped_description_lines() -> None:
+    """A description that wraps onto a second line must not add a bogus command name."""
+    rich_panel = (
+        "╭─ Commands ───────────────────────────────╮\n"
+        "│ version   Print the version and the      │\n"
+        "│           supported Report schema.       │\n"
+        "│ other     Does something.                │\n"
+        "╰──────────────────────────────────────────╯\n"
+    )
+    assert _commands_listed_in_help(rich_panel) == ["version", "other"]
+    plain = "Commands:\n  version  Print the version and the\n           supported Report schema.\n"
+    assert _commands_listed_in_help(plain) == ["version"]
 
 
 @pytest.fixture(scope="module")
@@ -148,16 +181,28 @@ def test_sdist_carries_the_project_but_not_devtools_or_tests(tmp_path: Path) -> 
     assert excluded == [] and "tests" not in inside, excluded
 
 
-def test_version_prints_pyproject_version_and_exits_zero(installed_cli: Path) -> None:
+def test_version_prints_pyproject_version_and_schema_versions_and_exits_zero(
+    installed_cli: Path,
+) -> None:
+    """Story 3.1 criterion 4 (PRD AC-30.2) against the installed wheel, not the source tree."""
     result = _run([str(installed_cli), "version"], check=False)
     assert result.returncode == 0, result.stderr
-    assert result.stdout.splitlines() == [_pyproject_version()]
+    assert result.stdout.splitlines() == [
+        f"agentproof {_pyproject_version()}",
+        "suite schema versions: 1",
+        "trace schema versions: 1",
+        "report schema versions: 1",
+    ]
+    assert result.stderr == ""
 
 
-def test_help_lists_only_version(installed_cli: Path) -> None:
+def test_help_lists_only_version_and_the_global_options(installed_cli: Path) -> None:
     result = _run([str(installed_cli), "--help"], check=False)
     assert result.returncode == 0, result.stderr
-    assert _commands_listed_in_help(result.stdout) == ["version"]
+    help_text = _strip_ansi(result.stdout)
+    assert _commands_listed_in_help(help_text) == ["version"]
+    assert "--verbose" in help_text
+    assert "--no-color" in help_text
 
 
 def test_unknown_command_exits_nonzero(installed_cli: Path) -> None:

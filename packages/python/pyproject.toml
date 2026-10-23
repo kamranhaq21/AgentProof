@@ -29,6 +29,11 @@ dev = [
     # Type stubs for PyYAML so `mypy --strict` can check `loading.yaml_safe` (story 3.2);
     # PyYAML ships none. A dev dependency only; never part of the shipped wheel.
     "types-pyyaml>=6.0.12",
+    # Validate the fixtures against the generated JSON Schemas in tests (story 2.5,
+    # AD-4). Dev only: the product validates with Pydantic and never imports these
+    # (AD-16); tests/unit/test_schema_drift.py proves it.
+    "jsonschema>=4.26",
+    "referencing>=0.36",
     # Workspace member providing `uv run check` (story 1.2, ARCH-4). A dev
     # dependency only; it is never part of the shipped `agentproof` wheel.
     "agentproof-devtools",
@@ -101,3 +106,12 @@ files = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# `tests/unit/cli` and `tests/integration/cli` share a directory name; importlib mode gives
+# each test module a unique name from its path, so no `__init__.py` files are needed to
+# tell them apart (story 3.1).
+addopts = ["--import-mode=importlib"]
+markers = [
+    # Architecture AD-17: the CLI subprocess tests are the only tests allowed to spawn a
+    # process once the conftest guard exists; the marker names them today.
+    "allow_subprocess: runs the agentproof console script as a subprocess",
+]

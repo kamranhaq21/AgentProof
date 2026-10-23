@@ -37,7 +37,7 @@ from pydantic import (
 from pydantic_core import InitErrorDetails, PydanticCustomError
 from pydantic_core.core_schema import ErrorType
 
-from agentproof.constants import SCENARIO_ID_RE, WINDOWS_DEVICE_NAMES
+from agentproof.constants import SCENARIO_ID_RE, SUPPORTED_VERSIONS, WINDOWS_DEVICE_NAMES
 from agentproof.models.assertions import (
     ARGUMENT_PATH_PATTERN,
     MODEL_CONFIG,
@@ -149,7 +149,13 @@ class FixtureDefaults(BaseModel):
 
     model_config = MODEL_CONFIG
 
-    deterministic: bool = False
+    deterministic: bool = Field(
+        default=False,
+        description=(
+            "Whether the runner derives run_id and timestamps from the fixture Trace instead "
+            "of the clock, so repeated runs write byte-identical artifacts."
+        ),
+    )
 
 
 class CompareDefaults(BaseModel):
@@ -161,7 +167,13 @@ class CompareDefaults(BaseModel):
 
     model_config = MODEL_CONFIG
 
-    include_arguments: tuple[CompareArgumentPath, ...] = ()
+    include_arguments: tuple[CompareArgumentPath, ...] = Field(
+        default=(),
+        description=(
+            "The <tool>.<argument path> entries a Comparison compares, such as "
+            "approve_expense.amount; empty by default."
+        ),
+    )
 
 
 class RedactDefaults(BaseModel):
@@ -175,9 +187,24 @@ class RedactDefaults(BaseModel):
 
     model_config = MODEL_CONFIG
 
-    keys: tuple[Name, ...] = ()
-    paths: tuple[ArgumentPath, ...] = ()
-    env: tuple[Name, ...] = ()
+    keys: tuple[Name, ...] = Field(
+        default=(),
+        description=(
+            "Additional key names whose values are redacted wherever they appear, extending "
+            "the built-in set (api_key, token, password, authorization)."
+        ),
+    )
+    paths: tuple[ArgumentPath, ...] = Field(
+        default=(),
+        description="Dotted paths into event payloads whose values are redacted.",
+    )
+    env: tuple[Name, ...] = Field(
+        default=(),
+        description=(
+            "Names of environment variables whose current values are scrubbed from every "
+            "artifact; names only, never values."
+        ),
+    )
 
 
 class SuiteDefaults(BaseModel):
@@ -189,15 +216,30 @@ class SuiteDefaults(BaseModel):
 
     model_config = MODEL_CONFIG
 
-    adapter: str | None = Field(default=None, min_length=1)
-    """Adapter name or ``pkg.module:ClassName``; the CLI ``--adapter`` overrides it."""
-
-    fail_on_missing_trace: bool = True
-    """Whether an absent Trace yields ``error`` results (true) or ``skipped`` ones (AD-6)."""
-
-    fixture: FixtureDefaults = Field(default_factory=FixtureDefaults)
-    compare: CompareDefaults = Field(default_factory=CompareDefaults)
-    redact: RedactDefaults = Field(default_factory=RedactDefaults)
+    adapter: str | None = Field(
+        default=None,
+        min_length=1,
+        description=(
+            "The adapter name or pkg.module:ClassName that runs the Scenarios; the CLI "
+            "--adapter option overrides it."
+        ),
+    )
+    fail_on_missing_trace: bool = Field(
+        default=True,
+        description=(
+            "Whether an absent Trace yields error results (true) or skipped results (false)."
+        ),
+    )
+    fixture: FixtureDefaults = Field(
+        default_factory=FixtureDefaults, description="How the Fixture Agent runs."
+    )
+    compare: CompareDefaults = Field(
+        default_factory=CompareDefaults,
+        description="What a Comparison looks at beyond statuses and tool sequences.",
+    )
+    redact: RedactDefaults = Field(
+        default_factory=RedactDefaults, description="The Redaction rules for every artifact."
+    )
 
 
 class Scenario(BaseModel):
@@ -212,12 +254,35 @@ class Scenario(BaseModel):
 
     model_config = MODEL_CONFIG
 
-    id: str
-    description: str | None = None
-    skip: str | None = Field(default=None, min_length=1)
-    input: dict[str, JsonValue]
-    trace: str | None = Field(default=None, min_length=1)
-    assertions: tuple[AssertionConfig, ...] = Field(min_length=1)
+    id: str = Field(
+        description=(
+            "The Scenario id: 1 to 64 letters, digits, '.', '_' or '-', not starting with "
+            "punctuation, not a Windows device name, unique in the Suite ignoring case."
+        )
+    )
+    description: str | None = Field(
+        default=None, description="A free-text description of the Scenario."
+    )
+    skip: str | None = Field(
+        default=None,
+        min_length=1,
+        description="The reason the Scenario is skipped; its presence means skipped.",
+    )
+    input: dict[str, JsonValue] = Field(
+        description="The JSON object passed to the adapter as the Scenario's input."
+    )
+    trace: str | None = Field(
+        default=None,
+        min_length=1,
+        description=(
+            "Path of the fixture Trace, relative to the Suite file; the Fixture Agent's "
+            "source and the replay default."
+        ),
+    )
+    assertions: tuple[AssertionConfig, ...] = Field(
+        min_length=1,
+        description="The Assertions evaluated against the Scenario's Trace; at least one.",
+    )
 
     @field_validator("id", mode="after")
     @classmethod
@@ -292,11 +357,23 @@ class Suite(BaseModel):
 
     model_config = MODEL_CONFIG
 
-    version: Literal[1]
-    suite: str
-    description: str | None = None
-    defaults: SuiteDefaults = Field(default_factory=SuiteDefaults)
-    scenarios: tuple[Scenario, ...] = Field(min_length=1)
+    version: Literal[1] = Field(
+        description="The Suite schema version, an integer independent of the package version.",
+        json_schema_extra={"enum": list(SUPPORTED_VERSIONS["suite"])},
+    )
+    suite: str = Field(
+        description="The Suite id, with the same rule as Scenario ids; names the Report's suite_id."
+    )
+    description: str | None = Field(
+        default=None, description="A free-text description of the Suite."
+    )
+    defaults: SuiteDefaults = Field(
+        default_factory=SuiteDefaults,
+        description="Suite-level settings every Scenario inherits; every section optional.",
+    )
+    scenarios: tuple[Scenario, ...] = Field(
+        min_length=1, description="The Scenarios of the Suite, in order; at least one."
+    )
 
     @field_validator("version", mode="before")
     @classmethod
