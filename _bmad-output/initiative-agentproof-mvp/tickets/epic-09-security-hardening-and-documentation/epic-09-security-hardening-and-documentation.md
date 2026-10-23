@@ -63,3 +63,4 @@ For an external developer, the package installs and demonstrates a regression wi
 - Decision (2026-10-22): tracer bullet is story 1, the README quick start with its doctest extraction running against the wheel; it proves the docs-to-CI mechanism before the reference pages exist.
 - Open question: OQ-1 and OQ-2 gate story 5; the entry carries the unknown so it cannot start unsettled.
 - Assumption: external testers are recruited by the maintainer (hitl in story 6).
+- Decision (2026-10-23): the license stub is `docs/decisions/0021-license.md` (ADR files took 0001 to 0020 in story 1.5); story 4's references were repointed.

@@ -27,7 +27,7 @@ The process documents a public project needs before launch, and the license file
    **When** read
    **Then** every item of spec §11.1 is listed with its evidence (a test name, a file, or a dated note) and any unmet item has an issue link and an owner.
 3. **License** (R5; initiative C9; OQ-2)
-   **Given** the maintainer's recorded decision in `docs/decisions/0001-license.md`
+   **Given** the maintainer's recorded decision in `docs/decisions/0021-license.md`
    **When** this story completes
    **Then** `LICENSE` holds that license's text, `pyproject.toml` carries the matching classifier and `license` field, and CONTRIBUTING states the contribution terms.
 4. **Dependency licenses** (R4; spec §13.3)
@@ -47,7 +47,7 @@ The process documents a public project needs before launch, and the license file
 
 ## Notes
 
-- Files: `SECURITY.md`, `LICENSE`, `docs/decisions/security-review.md`, `docs/decisions/0001-license.md`, `pyproject.toml`, `CONTRIBUTING.md`.
+- Files: `SECURITY.md`, `LICENSE`, `docs/decisions/security-review.md`, `docs/decisions/0021-license.md`, `pyproject.toml`, `CONTRIBUTING.md`.
 - Tests: `tests/unit/test_license_metadata.py` (classifier matches LICENSE).
 - Depends on: story 3. Risk: medium.
 - Hitl step: the maintainer decides the license (OQ-2) and signs off the review record.
