@@ -89,10 +89,10 @@ def test_no_color_version_has_no_escape_sequence() -> None:
 
 
 def test_an_unknown_command_is_a_usage_error_with_exit_2_and_no_traceback() -> None:
-    result = _run("validate", "x.yaml")
+    result = _run("frobnicate", "x.yaml")
     assert result.returncode == 2
     assert "Traceback" not in result.stderr
-    assert "validate" in _strip_ansi(result.stderr)
+    assert "frobnicate" in _strip_ansi(result.stderr)
 
 
 @pytest.mark.parametrize("option", ["--verbose", "--no-color"])

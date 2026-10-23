@@ -48,12 +48,12 @@ def test_version_text_follows_the_documented_four_line_format() -> None:
     ]
 
 
-def test_help_lists_only_version_command() -> None:
+def test_help_lists_the_registered_commands() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     # CommandInfo.name is None until Typer derives it from the function name while
     # building the Click group, so assert on the built group's command set.
-    assert list(get_command(app).commands) == ["version"]
+    assert sorted(get_command(app).commands) == ["validate", "version"]
     assert "version" in _strip_ansi(result.stdout)
 
 
