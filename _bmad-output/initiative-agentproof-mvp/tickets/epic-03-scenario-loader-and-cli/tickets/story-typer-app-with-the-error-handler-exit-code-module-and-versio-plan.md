@@ -3,7 +3,7 @@ title: 'Typer app with the error handler, exit-code module, and version command'
 type: 'feature'
 ticket: '1'
 created: '2026-10-23'
-status: in-progress
+status: done
 baseline_revision: 'fca6286427e55f823cb7560090bf0c6a491eecc5'
 route: 'full'
 route_source: 'pinned'
