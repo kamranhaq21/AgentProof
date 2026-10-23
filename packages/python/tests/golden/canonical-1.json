@@ -1,0 +1,36 @@
+{
+  "Uppercase": "sorts before lowercase",
+  "flags": [
+    true,
+    false,
+    null
+  ],
+  "nested": {
+    "a": "x",
+    "b": [
+      1,
+      {
+        "c": 3,
+        "d": 2
+      }
+    ],
+    "empty_list": [],
+    "empty_object": {}
+  },
+  "nothing": null,
+  "numbers": [
+    0,
+    -1,
+    42,
+    9007199254740993,
+    0.1,
+    2.5,
+    -3.75,
+    1e-07,
+    10.0
+  ],
+  "text": "line one\nline two\ttab \"quoted\" back\\slash",
+  "title": "golden é ü 日本語 🎉",
+  "version": 1,
+  "zeta": true
+}
