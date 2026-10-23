@@ -138,7 +138,7 @@ jobs:
       # the Windows checkout normalises pyproject.toml to CRLF, and Python's piped stdout
       # writes CRLF there too.
       - run: |
-          expected="$(tr -d '\r' < packages/python/pyproject.toml | sed -nE 's/^version = "([^"]*)"$/\1/p')"
+          expected="$(bash .github/scripts/pyproject-version.sh)"
           exe=.smoke/bin/agentproof
           [ -x "$exe" ] || exe=.smoke/Scripts/agentproof.exe
           actual="$("$exe" version | tr -d '\r' | head -n1)"

@@ -58,7 +58,7 @@ exclude = ["/devtools", "/tests"]
 [tool.ruff]
 line-length = 100
 # Both source roots, so ruff sorts `agentproof_devtools` as first-party like `agentproof`.
-src = [".", "src", "devtools/src"]
+src = [".", "src", "devtools/src", "tests"]
 
 [tool.ruff.lint]
 # Architecture AD-19 (story 3.2, epic-1 retrospective finding 4): the flake8-bandit rules
@@ -111,6 +111,9 @@ testpaths = ["tests"]
 # each test module a unique name from its path, so no `__init__.py` files are needed to
 # tell them apart (story 3.1).
 addopts = ["--import-mode=importlib"]
+# `tests/testsupport.py` (the repository roots and the subprocess helper) is imported by
+# name; importlib mode does not put `tests/` on `sys.path`, so it is listed here (story 2.7).
+pythonpath = ["tests"]
 markers = [
     # Architecture AD-17: the CLI subprocess tests are the only tests allowed to spawn a
     # process once the conftest guard exists; the marker names them today.

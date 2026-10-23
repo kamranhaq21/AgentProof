@@ -1,4 +1,4 @@
-"""``run_steps`` with an injected runner: order, stop-on-failure, multi-command steps, skip rule."""
+"""``run_steps`` with an injected runner: order, stop-on-failure, multi-command steps."""
 
 import subprocess
 import sys
@@ -118,37 +118,13 @@ def test_second_command_failure_is_reported_under_the_step_name(
     assert capsys.readouterr().out.splitlines() == ["==> ruff check", "failed: ruff check exited 1"]
 
 
-def test_lint_imports_is_skipped_with_reason_when_config_absent(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    lint_step = next(step for step in build_steps(tmp_path) if step.name == "lint-imports")
-    runner = RecordingRunner()
-    assert run_steps([lint_step], cwd=tmp_path, runner=runner) == 0
-    assert runner.calls == []
-    out = capsys.readouterr().out.splitlines()
-    assert out == ["==> lint-imports", "skipped: no .importlinter yet (story 1.3)"]
-
-
-def test_lint_imports_runs_when_config_present(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    (tmp_path / ".importlinter").write_text("[importlinter]\n", encoding="utf-8")
+def test_lint_imports_always_runs_with_the_repository_config(tmp_path: Path) -> None:
     lint_step = next(step for step in build_steps(tmp_path) if step.name == "lint-imports")
     runner = RecordingRunner({"lint-imports": 1})
     assert run_steps([lint_step], cwd=tmp_path, runner=runner) == 1
     assert [argv for argv, _ in runner.calls] == [
         ["lint-imports", "--config", str(tmp_path / ".importlinter"), "--no-cache"]
     ]
-    assert "skipped" not in capsys.readouterr().out
-
-
-def test_repository_importlinter_exists_so_lint_imports_is_not_skipped() -> None:
-    """Story 1.3: the real repository root has the contracts file, so the step runs."""
-    lint_step = next(
-        step for step in build_steps(check.REPOSITORY_ROOT) if step.name == "lint-imports"
-    )
-    assert lint_step.skip_reason is not None
-    assert lint_step.skip_reason() is None
 
 
 def test_main_exits_with_run_steps_result(monkeypatch: pytest.MonkeyPatch) -> None:

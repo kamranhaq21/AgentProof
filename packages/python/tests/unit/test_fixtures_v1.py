@@ -29,9 +29,9 @@ from referencing import Registry
 from agentproof.constants import REDACTED
 from agentproof.models import canonical
 from agentproof.models.export_schemas import KINDS, file_name
+from testsupport import PACKAGE_ROOT, REPOSITORY_ROOT
 
-PACKAGE_ROOT = Path(__file__).resolve().parents[2]
-SCHEMAS_DIR = PACKAGE_ROOT.parents[1] / "schemas"  # repository root (spine Structural Seed)
+SCHEMAS_DIR = REPOSITORY_ROOT / "schemas"  # repository root (spine Structural Seed)
 FIXTURES_DIR = PACKAGE_ROOT / "tests" / "fixtures" / "schema" / "v1"
 VALID = sorted((FIXTURES_DIR / "valid").glob("*.json"))
 INVALID = sorted((FIXTURES_DIR / "invalid").glob("*.json"))

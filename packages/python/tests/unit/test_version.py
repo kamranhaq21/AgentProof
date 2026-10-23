@@ -2,11 +2,9 @@
 
 import importlib.metadata
 import tomllib
-from pathlib import Path
 
 import agentproof
-
-PACKAGE_ROOT = Path(__file__).resolve().parents[2]
+from testsupport import PACKAGE_ROOT
 
 
 def test_version_equals_installed_metadata() -> None:

@@ -37,7 +37,7 @@ jobs:
       # The tag must name the version pyproject.toml declares, so a release never carries
       # another version's files.
       - run: |
-          expected="$(tr -d '\r' < packages/python/pyproject.toml | sed -nE 's/^version = "([^"]*)"$/\1/p')"
+          expected="$(bash .github/scripts/pyproject-version.sh)"
           echo "tag $GITHUB_REF_NAME, pyproject version '$expected'"
           test -n "$expected" && test "${GITHUB_REF_NAME#v}" = "$expected"
         shell: bash

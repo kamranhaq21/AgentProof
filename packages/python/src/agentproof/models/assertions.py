@@ -19,14 +19,9 @@ here touches a file, the clock, or the environment (AD-1).
 
 from typing import Annotated, Final, Literal, Self, get_args
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, Field, model_validator
 
-from agentproof.models.common import JsonValue
-
-MODEL_CONFIG: Final[ConfigDict] = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
-"""The one model configuration every serialized model uses (AD-3): frozen after
-construction, unknown fields rejected naming the field path, NaN and infinity rejected,
-and no model-level ``strict`` so Python-mode validation of a dict is the only mode."""
+from agentproof.models.common import MODEL_CONFIG, JsonValue
 
 ToolName = Annotated[str, Field(min_length=1)]
 """A tool name as a Trace records it: any non-empty string."""

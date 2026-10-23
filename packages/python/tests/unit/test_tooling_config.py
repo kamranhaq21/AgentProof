@@ -1,9 +1,8 @@
 """The tool configuration in ``pyproject.toml`` matches the architecture's typing convention."""
 
 import tomllib
-from pathlib import Path
 
-PACKAGE_ROOT = Path(__file__).resolve().parents[2]
+from testsupport import PACKAGE_ROOT
 
 
 def _pyproject() -> dict[str, object]:

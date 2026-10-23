@@ -17,9 +17,10 @@ from pathlib import Path
 
 import pytest
 
+from testsupport import PACKAGE_ROOT, run_captured
+
 pytestmark = pytest.mark.allow_subprocess
 
-PACKAGE_ROOT = Path(__file__).resolve().parents[3]
 SUBPROCESS_TIMEOUT_SECONDS = 120
 
 TESTING = "AGENTPROOF_TESTING"
@@ -46,8 +47,9 @@ def _pyproject_version() -> str:
 def _run(*argv: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     """Run the script with a deterministic environment: no color, no inherited fault flags."""
     base = {key: value for key, value in os.environ.items() if key not in (TESTING, FAULT_INJECT)}
-    return subprocess.run(
+    return run_captured(
         [_console_script(), *argv],
+        timeout=SUBPROCESS_TIMEOUT_SECONDS,
         env={
             **base,
             "NO_COLOR": "1",
@@ -56,11 +58,6 @@ def _run(*argv: str, env: dict[str, str] | None = None) -> subprocess.CompletedP
             "PYTHONIOENCODING": "utf-8",
             **(env or {}),
         },
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=SUBPROCESS_TIMEOUT_SECONDS,
-        check=False,
     )
 
 

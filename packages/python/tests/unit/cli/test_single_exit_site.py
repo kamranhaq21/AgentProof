@@ -12,7 +12,8 @@ contain a finding.
 import ast
 from pathlib import Path
 
-PACKAGE_ROOT = Path(__file__).resolve().parents[3]
+from testsupport import PACKAGE_ROOT
+
 SOURCE_ROOT = PACKAGE_ROOT / "src" / "agentproof"
 THE_ONE_EXIT_SITE = SOURCE_ROOT / "cli" / "app.py"
 

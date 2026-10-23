@@ -13,7 +13,6 @@ importing ``agentproof`` and every ``agentproof.models`` module never imports
 import json
 import pkgutil
 import re
-import subprocess
 import sys
 import tomllib
 from importlib.metadata import version as installed_version
@@ -27,9 +26,9 @@ from agentproof.constants import RFC3339_WITH_OFFSET, SUPPORTED_VERSIONS
 from agentproof.models import canonical, export_schemas
 from agentproof.models.trace import TIMESTAMP_PATTERN
 from agentproof_devtools import export_schemas as devtools_export
+from testsupport import PACKAGE_ROOT, REPOSITORY_ROOT, run_captured
 
-PACKAGE_ROOT = Path(__file__).resolve().parents[2]
-SCHEMAS_DIR = PACKAGE_ROOT.parents[1] / "schemas"  # repository root (spine Structural Seed)
+SCHEMAS_DIR = REPOSITORY_ROOT / "schemas"  # repository root (spine Structural Seed)
 KINDS = tuple(export_schemas.KINDS)
 REGENERATE = "uv run python -m agentproof_devtools.export_schemas"
 SUBPROCESS_TIMEOUT_SECONDS = 120
@@ -262,13 +261,9 @@ def _models_modules() -> list[str]:
 
 def test_importing_agentproof_and_every_models_module_never_imports_jsonschema() -> None:
     names = _models_modules()
-    completed = subprocess.run(
+    completed = run_captured(
         [sys.executable, "-I", "-c", _IMPORT_PROBE, json.dumps(names)],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
         timeout=SUBPROCESS_TIMEOUT_SECONDS,
-        check=False,
     )
     assert completed.returncode == 0, completed.stderr
     probe = json.loads(completed.stdout)

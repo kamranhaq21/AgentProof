@@ -40,11 +40,10 @@ from pydantic_core.core_schema import ErrorType
 from agentproof.constants import SCENARIO_ID_RE, SUPPORTED_VERSIONS, WINDOWS_DEVICE_NAMES
 from agentproof.models.assertions import (
     ARGUMENT_PATH_PATTERN,
-    MODEL_CONFIG,
     ArgumentPath,
     AssertionConfig,
 )
-from agentproof.models.common import JsonValue
+from agentproof.models.common import MODEL_CONFIG, JsonValue
 
 _KNOWN_ERROR_TYPES: Final[frozenset[str]] = frozenset(get_args(ErrorType))
 

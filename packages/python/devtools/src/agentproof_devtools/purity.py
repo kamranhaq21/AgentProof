@@ -18,7 +18,8 @@ Run as ``python -m agentproof_devtools.purity <target>...`` where each target is
 package directory or module path under ``src/agentproof``; a module given without its
 ``.py`` suffix (``src/agentproof/constants``) is resolved to the file. Findings are printed
 one per line as ``path:line:col: purity: <call>`` and the exit code is 1 when there is
-any finding, 2 when a target is missing or a file cannot be parsed.
+any finding, 2 when a target is missing or a file cannot be parsed (a syntax error, or
+bytes that are not valid UTF-8).
 """
 
 import ast
@@ -178,7 +179,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         for file in iter_python_files(target):
             try:
                 violations = find_violations(file)
-            except SyntaxError as error:
+            except (SyntaxError, UnicodeDecodeError) as error:
                 print(f"purity: cannot parse {file}: {error}", file=sys.stderr)
                 return 2
             for violation in violations:

@@ -56,7 +56,7 @@ from pydantic import (
 from pydantic_core import InitErrorDetails, PydanticCustomError
 
 from agentproof.constants import RFC3339_WITH_OFFSET, SUPPORTED_VERSIONS
-from agentproof.models.common import JsonValue
+from agentproof.models.common import JsonValue, _null_means_absent
 
 __all__ = [
     "EVENT_TYPES",
@@ -187,26 +187,6 @@ def _require_finite[T: JsonValue](value: T) -> T:
             {"number": str(number), "path": path or "the value itself"},
         )
     return value
-
-
-def _null_means_absent(model: type[BaseModel], data: Any) -> Any:
-    """Drop ``None`` values for fields that have a default, so ``null`` reads as absent.
-
-    AD-19 serializes absent optional fields as ``null``; without this a Trace written with
-    the full key set (``"capture": null``, ``"metadata": null``) would not read back.
-    Only dict input is touched, and only keys that name a field with a default are
-    dropped, so a ``null`` for a required field and an unknown key keep their normal
-    errors. Used as a ``model_validator(mode="before")`` by ``Trace`` and ``TraceEvent``;
-    the Suite models may hoist it later.
-    """
-    if not isinstance(data, dict):
-        return data
-    fields = model.model_fields
-    return {
-        key: value
-        for key, value in data.items()
-        if not (value is None and key in fields and not fields[key].is_required())
-    }
 
 
 TraceSchemaVersion = Annotated[

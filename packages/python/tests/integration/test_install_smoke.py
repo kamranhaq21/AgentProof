@@ -18,7 +18,8 @@ from pathlib import Path
 
 import pytest
 
-PACKAGE_ROOT = Path(__file__).resolve().parents[2]
+from testsupport import PACKAGE_ROOT, run_captured
+
 SUBPROCESS_TIMEOUT_SECONDS = 600
 
 
@@ -45,16 +46,7 @@ def _run(
         "COLUMNS": "400",
         "PYTHONIOENCODING": "utf-8",
     }
-    return subprocess.run(
-        list(argv),
-        cwd=cwd,
-        env=env,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=SUBPROCESS_TIMEOUT_SECONDS,
-        check=check,
-    )
+    return run_captured(argv, cwd=cwd, env=env, timeout=SUBPROCESS_TIMEOUT_SECONDS, check=check)
 
 
 def _pyproject_version() -> str:
