@@ -1,0 +1,60 @@
+# Continuous integration (story 1.4). The quality gate is defined exactly once, as the
+# `check` entry point in packages/python/devtools (architecture AD-17, story 1.2); this
+# workflow installs uv and Python and calls that entry point, nothing else. It runs the
+# same gate the maintainer runs locally (CONTRIBUTING.md, "The one check") on both
+# supported operating systems and every supported Python version.
+#
+# Every `uses:` is pinned to a full commit SHA with the matching tag in a trailing
+# comment, and the workflow asks for read access only; tests/unit/test_workflow_pins.py
+# fails when a pin, the permissions, the matrix, or the check step drift from this.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - backlog
+
+permissions:
+  contents: read
+
+# One run per ref: a new push to the same branch or pull request cancels the run it
+# supersedes, so the queue never holds results nobody will read.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    # The eight resulting job names, `check (ubuntu-latest, 3.12)` and so on, are the
+    # required status-check contexts in the protection rule on `main`. Changing this
+    # template changes those contexts; update the protection rule in the same change.
+    name: check (${{ matrix.os }}, ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Every cell reports: a failure on one runner or version never hides another.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.12", "3.13", "3.14", "3.15"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # uv installs Python itself (`python-version` sets UV_PYTHON); no actions/setup-python.
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+
+      # Default `uv sync` keeps the devtools workspace member editable, which the check
+      # entry point relies on to find packages/python. `--locked` fails if uv.lock is
+      # stale instead of silently re-resolving.
+      - run: uv sync --locked
+        working-directory: packages/python
+        shell: bash
+
+      # The check stage: exactly this one step, exactly this command.
+      - run: uv run check
+        working-directory: packages/python
+        shell: bash
