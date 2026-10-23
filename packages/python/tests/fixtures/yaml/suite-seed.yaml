@@ -1,0 +1,25 @@
+version: 1
+suite: expense-agent              # id, same charset as scenario ids
+description: "..."                # optional
+defaults:                         # all optional
+  adapter: fixture                # adapter name; CLI --adapter overrides
+  fail_on_missing_trace: true
+  fixture: {deterministic: true}  # runner derives run_id and timestamps from the fixture Trace
+  compare: {include_arguments: ["approve_expense.amount"]}
+  redact: {keys: [], paths: [], env: ["OPENAI_API_KEY"]}
+scenarios:
+  - id: reject-over-limit
+    description: "..."            # optional
+    skip: "reason"                # optional; presence means skipped
+    input: {expense_amount: 5000} # JsonValue object passed to the adapter
+    trace: traces/reject-over-limit.trace.json   # optional; fixture source, and replay default; relative to this file
+    assertions:
+      - type: tool_not_called
+        tool: approve_expense
+      - type: tool_call_count
+        tool: reject_expense
+        equals: 1
+      - id: says-rejected        # optional; default tool_called-2 style per AD-8
+        type: final_output_contains
+        value: "rejected"
+        case_sensitive: true
