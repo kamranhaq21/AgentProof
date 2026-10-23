@@ -189,6 +189,50 @@ def _inner_path_text(path: HolePath) -> str:
     return ".".join(str(item) for item in path) or "the value itself"
 
 
+def _assert_one_finite_error(
+    excinfo: pytest.ExceptionInfo[ValidationError],
+    loc: tuple[object, ...],
+    number: float,
+    inner: HolePath,
+) -> None:
+    """Exactly one error: ``finite_number`` at ``loc`` whose structured context is exact.
+
+    ``ctx`` is what the error was built from (``PydanticCustomError``'s context), not text
+    searched in the message: ``ctx["path"]`` must equal the hole's path and
+    ``ctx["number"]`` the value, so a wrong path cannot pass by appearing in the prose.
+    """
+    errors = _errors(excinfo)
+    assert [(tuple(e["loc"]), e["type"]) for e in errors] == [(loc, "finite_number")]
+    assert errors[0]["ctx"] == {"number": str(number), "path": _inner_path_text(inner)}
+
+
+def _assert_identical(left: object, right: object, where: str = "") -> None:
+    """Equal value, same type at every node, same ``repr`` for floats (``-0.0`` is not ``0.0``).
+
+    ``==`` alone cannot see ``1`` versus ``1.0`` versus ``True``; this can.
+    """
+    assert type(left) is type(right), f"{where or 'root'}: {left!r} vs {right!r}"
+    if isinstance(left, dict):
+        assert isinstance(right, dict) and set(left) == set(right), where
+        for key in left:
+            _assert_identical(left[key], right[key], f"{where}.{key}")
+    elif isinstance(left, list | tuple):
+        assert isinstance(right, list | tuple) and len(left) == len(right), where
+        for index, (a, b) in enumerate(zip(left, right, strict=True)):
+            _assert_identical(a, b, f"{where}[{index}]")
+    elif isinstance(left, float):
+        assert repr(left) == repr(right), where
+    else:
+        assert left == right, where
+
+
+def _assert_models_identical(left: BaseModel, right: BaseModel) -> None:
+    """Models equal, and their Python and JSON dumps identical down to scalar types."""
+    assert left == right
+    _assert_identical(left.model_dump(), right.model_dump())
+    _assert_identical(left.model_dump(mode="json"), right.model_dump(mode="json"))
+
+
 def _none_default_fields(model: type[BaseModel]) -> list[str]:
     return [
         name
@@ -249,6 +293,7 @@ def test_json_values_round_trip_through_canonical_dumps(value: JsonValue) -> Non
     text = dumps(value)
     again = json.loads(text)
     assert again == value
+    _assert_identical(value, again)
     assert dumps(again) == text
 
 
@@ -256,7 +301,7 @@ def test_json_values_round_trip_through_canonical_dumps(value: JsonValue) -> Non
 @settings(max_examples=200)
 def test_trace_round_trips_through_canonical_dumps(trace: JsonObject) -> None:
     original, text, again = _round_trip(Trace, trace)
-    assert again == original
+    _assert_models_identical(original, again)
     assert dumps(again.model_dump(mode="json")) == text
 
 
@@ -264,7 +309,7 @@ def test_trace_round_trips_through_canonical_dumps(trace: JsonObject) -> None:
 @settings(max_examples=200)
 def test_report_round_trips_through_canonical_dumps(report: JsonObject) -> None:
     original, text, again = _round_trip(Report, report)
-    assert again == original
+    _assert_models_identical(original, again)
     assert dumps(again.model_dump(mode="json")) == text
 
 
@@ -274,7 +319,7 @@ def test_suite_with_every_scenario_skipped_round_trips_through_canonical_dumps(
     suite: JsonObject,
 ) -> None:
     original, text, again = _round_trip(Suite, suite)
-    assert again == original
+    _assert_models_identical(original, again)
     assert dumps(again.model_dump(mode="json")) == text
 
 
@@ -285,8 +330,22 @@ def test_suite_with_an_unskipped_scenario_round_trips_through_canonical_dumps(
     suite: JsonObject,
 ) -> None:
     # xfail: finding F1 (see the story 2.6 plan; routed to stories 2.7/3.3 in deferred-work.md).
-    original, _, again = _round_trip(Suite, suite)
-    assert again == original
+    # The expected failure is exactly "skip: null" at each unskipped Scenario; any other error
+    # (or a missing one) is a different outcome and must not hide behind the xfail.
+    original = Suite.model_validate(suite)
+    dumped = json.loads(dumps(original.model_dump(mode="json")))
+    try:
+        again = Suite.model_validate(dumped)
+    except ValidationError as error:
+        found = [(tuple(e["loc"]), e["type"]) for e in error.errors(include_url=False)]
+        expected = [
+            (("scenarios", index, "skip"), "value_error")
+            for index, scenario in enumerate(suite["scenarios"])
+            if "skip" not in scenario
+        ]
+        assert found == expected
+        raise
+    _assert_models_identical(original, again)
 
 
 # --- criterion 2: null versus absent ---------------------------------------------------------
@@ -342,23 +401,44 @@ def test_null_for_any_absent_optional_field_reads_as_absent(trace: JsonObject) -
     assert Trace.model_validate(_null_for_absent(trace)) == Trace.model_validate(trace)
 
 
-@pytest.mark.xfail(strict=True, raises=ValidationError, reason=F2)
-@given(
-    trace=trace_dicts(presence=False),
-    tool_calls=st.none(),
-    redaction=st.fixed_dictionaries(
-        {}, optional={"applied": st.none(), "paths": st.none(), "env_names": st.none()}
+NESTED_NULLS: dict[str, tuple[JsonObject, tuple[str, ...], str]] = {
+    "capture.tool_calls": (
+        {"capture": {"tool_calls": None}},
+        ("capture", "tool_calls"),
+        "literal_error",
     ),
-)
+    "redaction.applied": ({"redaction": {"applied": None}}, ("redaction", "applied"), "bool_type"),
+    "redaction.paths": ({"redaction": {"paths": None}}, ("redaction", "paths"), "tuple_type"),
+    "redaction.env_names": (
+        {"redaction": {"env_names": None}},
+        ("redaction", "env_names"),
+        "tuple_type",
+    ),
+}
+"""Per field: the nested object holding one explicit null, the expected error location, type."""
+
+
+@pytest.mark.xfail(strict=True, raises=ValidationError, reason=F2)
+@pytest.mark.parametrize("field", list(NESTED_NULLS))
+@given(trace=trace_dicts(presence=False))
 @EXPECTED_FAILURE
 def test_explicit_null_for_a_nested_field_with_a_default_reads_as_absent(
-    trace: JsonObject, tool_calls: None, redaction: JsonObject
+    field: str, trace: JsonObject
 ) -> None:
     # xfail: finding F2 (see the story 2.6 plan; routed to story 2.7 in deferred-work.md).
-    # The dump of an omitted ``capture`` is ``{"tool_calls": "unknown"}``, never null, so
-    # this input is not something the serializer writes; AD-19 still says null reads as absent.
-    with_nulls = {**trace, "capture": {"tool_calls": tool_calls}, "redaction": redaction}
-    assert Trace.model_validate(with_nulls) == Trace.model_validate(trace)
+    # One case per field, so fixing some fields turns exactly those cases into strict XPASS
+    # failures. The dump of an omitted ``capture`` is ``{"tool_calls": "unknown"}``, never
+    # null, so this input is not something the serializer writes; AD-19 says null reads as
+    # absent. The expected failure is exactly this field's error and nothing else.
+    nulls, loc, error_type = NESTED_NULLS[field]
+    with_null = {**trace, **nulls}
+    try:
+        validated = Trace.model_validate(with_null)
+    except ValidationError as error:
+        found = [(tuple(e["loc"]), e["type"]) for e in error.errors(include_url=False)]
+        assert found == [(loc, error_type)]
+        raise
+    assert validated == Trace.model_validate(trace)
 
 
 # --- criterion 3: non-finite numbers ---------------------------------------------------------
@@ -381,8 +461,7 @@ def test_non_finite_in_a_tool_argument_result_or_final_output_is_rejected_naming
     with pytest.raises(ValidationError) as excinfo:
         Trace.model_validate(trace)
 
-    assert _locs_and_types(excinfo) == [(("events", 0, field), "finite_number")]
-    assert _inner_path_text(path) in _errors(excinfo)[0]["msg"]
+    _assert_one_finite_error(excinfo, ("events", 0, field), number, path)
 
 
 @given(hole=json_values_with_a_hole(), number=NON_FINITE, key=path_segments())
@@ -397,8 +476,7 @@ def test_non_finite_in_event_metadata_is_rejected_naming_the_path(
     with pytest.raises(ValidationError) as excinfo:
         Trace.model_validate(trace)
 
-    assert _locs_and_types(excinfo) == [(("events", 0, "metadata"), "finite_number")]
-    assert _inner_path_text((key, *path)) in _errors(excinfo)[0]["msg"]
+    _assert_one_finite_error(excinfo, ("events", 0, "metadata"), number, (key, *path))
 
 
 @given(hole=json_values_with_a_hole(), number=NON_FINITE, key=texts())
@@ -476,10 +554,9 @@ def test_non_finite_final_output_inside_an_embedded_trace_is_rejected_naming_the
     with pytest.raises(ValidationError) as excinfo:
         Report.model_validate(report)
 
-    assert _locs_and_types(excinfo) == [
-        (("scenarios", 0, "trace", "events", 0, "output"), "finite_number")
-    ]
-    assert _inner_path_text(path) in _errors(excinfo)[0]["msg"]
+    _assert_one_finite_error(
+        excinfo, ("scenarios", 0, "trace", "events", 0, "output"), number, path
+    )
 
 
 @given(
@@ -506,6 +583,118 @@ def test_non_finite_in_a_comparison_argument_change_is_rejected_naming_the_path(
     _assert_finite_number_error_at(excinfo, ("argument_changes", 0, side, *path))
 
 
+def _nested(depth: int, leaf: JsonValue, key: str = "k") -> JsonValue:
+    """``{key: {key: ... leaf}}`` with ``depth`` objects, built iteratively."""
+    value = leaf
+    for _ in range(depth):
+        value = {key: value}
+    return value
+
+
+F3 = (
+    "F3: JsonValue nesting beyond about 90 levels fails validation with recursion_loop and one "
+    "error per union branch (hundreds of lines), even for finite valid JSON"
+)
+
+
+@pytest.mark.xfail(strict=True, raises=ValidationError, reason=F3)
+def test_finite_json_one_hundred_and_fifty_levels_deep_is_accepted() -> None:
+    # xfail: finding F3 (see the story 2.6 plan; deferred-work.md). ``json.loads`` and
+    # ``dumps`` handle this depth; the model does not. The expected failure is exactly a
+    # ``recursion_loop`` under the payload, not any other error.
+    value: JsonValue = 1
+    for level in range(150):
+        value = [0, value] if level % 10 == 9 else {"k": value}
+    assert json.loads(dumps(value)) == value
+    trace = _min_trace()
+    trace["events"] = [{"seq": 0, "type": "tool_call", "arguments": value}]
+    try:
+        Trace.model_validate(trace)
+    except ValidationError as error:
+        errors = error.errors(include_url=False)
+        assert {tuple(e["loc"][:3]) for e in errors} == {("events", 0, "arguments")}
+        assert "recursion_loop" in {e["type"] for e in errors}
+        raise
+
+
+@pytest.mark.parametrize("depth", [50, 80])
+def test_non_finite_deep_in_a_trace_payload_names_the_exact_path(depth: int) -> None:
+    # Fixed, not generated: real depth, with a list index mixed in every tenth level.
+    value: JsonValue = math.nan
+    path: list[int | str] = []
+    for level in range(depth):
+        if level % 10 == 9:
+            value, path = [0, value], [1, *path]
+        else:
+            value, path = {"k": value}, ["k", *path]
+    assert len(path) == depth
+    trace = _min_trace()
+    trace["events"] = [{"seq": 0, "type": "tool_call", "arguments": value}]
+
+    with pytest.raises(ValidationError) as excinfo:
+        Trace.model_validate(trace)
+
+    _assert_one_finite_error(excinfo, ("events", 0, "arguments"), math.nan, tuple(path))
+
+
+def test_non_finite_fifty_levels_deep_in_a_suite_input_is_located_by_the_path() -> None:
+    suite = _min_suite()
+    suite["scenarios"][0]["input"] = {"k": _nested(49, math.inf)}
+
+    with pytest.raises(ValidationError) as excinfo:
+        Suite.model_validate(suite)
+
+    _assert_finite_number_error_at(excinfo, ("scenarios", 0, "input", *["k"] * 50))
+
+
+def test_two_holes_in_one_trace_payload_report_the_first_in_document_order() -> None:
+    trace = _min_trace()
+    trace["events"] = [
+        {"seq": 0, "type": "tool_call", "arguments": {"a": [1, {"b": math.nan}], "c": math.inf}}
+    ]
+
+    with pytest.raises(ValidationError) as excinfo:
+        Trace.model_validate(trace)
+
+    _assert_one_finite_error(excinfo, ("events", 0, "arguments"), math.nan, ("a", 1, "b"))
+
+
+def test_two_holes_in_different_trace_events_each_get_their_own_error() -> None:
+    trace = _min_trace()
+    trace["events"] = [
+        {"seq": 0, "type": "tool_call", "arguments": {"x": [math.inf]}},
+        {"seq": 1, "type": "custom", "metadata": {"fine": 1}},
+        {"seq": 2, "type": "agent_finished", "output": {"y": {"z": -math.inf}}},
+    ]
+
+    with pytest.raises(ValidationError) as excinfo:
+        Trace.model_validate(trace)
+
+    assert [(tuple(e["loc"]), e["type"], e["ctx"]) for e in _errors(excinfo)] == [
+        (("events", 0, "arguments"), "finite_number", {"number": "inf", "path": "x.0"}),
+        (("events", 2, "output"), "finite_number", {"number": "-inf", "path": "y.z"}),
+    ]
+
+
+def test_two_holes_in_a_suite_input_are_both_located_and_the_clean_key_is_not() -> None:
+    suite = _min_suite()
+    suite["scenarios"][0]["input"] = {
+        "first": [1, math.nan],
+        "clean": {"n": 1.5},
+        "second": {"deep": math.inf},
+    }
+
+    with pytest.raises(ValidationError) as excinfo:
+        Suite.model_validate(suite)
+
+    locs = [tuple(error["loc"]) for error in _errors(excinfo)]
+    finite = [tuple(e["loc"]) for e in _errors(excinfo) if e["type"] == "finite_number"]
+    base = ("scenarios", 0, "input")
+    assert any(_is_subsequence((*base, "first", 1), loc) for loc in finite)
+    assert any(_is_subsequence((*base, "second", "deep"), loc) for loc in finite)
+    assert not any("clean" in loc for loc in locs)
+
+
 @given(hole=json_values_with_a_hole(), number=NON_FINITE)
 @settings(max_examples=100)
 def test_dumps_refuses_a_non_finite_number_anywhere(hole: Any, number: float) -> None:
@@ -517,29 +706,47 @@ def test_dumps_refuses_a_non_finite_number_anywhere(hole: Any, number: float) ->
 # --- criterion 4: Unicode and byte identity --------------------------------------------------
 
 
-@given(text=texts(), stamp=timestamps())
+@given(
+    values=st.lists(texts(), min_size=11, max_size=11, unique=True),
+    started=timestamps(),
+    ended=timestamps(),
+)
 @settings(max_examples=200)
-def test_generated_strings_survive_the_round_trip_exactly(text: str, stamp: str) -> None:
+def test_generated_strings_survive_the_round_trip_exactly(
+    values: list[str], started: str, ended: str
+) -> None:
+    # Eleven pairwise-distinct strings, one per field, so a swap between fields fails.
+    (run_id, scenario_id, agent, agent_version, adapter, adapter_version) = values[:6]
+    (tool, argument_key, argument_value, output, status) = values[6:]
     trace: JsonObject = {
         "version": 1,
-        "run_id": text,
-        "scenario_id": text,
-        "started_at": stamp,
-        "ended_at": stamp,
-        "agent": {"name": text, "version": text},
-        "adapter": {"name": text, "version": text},
+        "run_id": run_id,
+        "scenario_id": scenario_id,
+        "started_at": started,
+        "ended_at": ended,
+        "agent": {"name": agent, "version": agent_version},
+        "adapter": {"name": adapter, "version": adapter_version},
         "events": [
-            {"seq": 0, "type": "tool_call", "tool": {"name": text}, "arguments": {text: text}},
-            {"seq": 1, "type": "agent_finished", "output": text, "status": text},
+            {
+                "seq": 0,
+                "type": "tool_call",
+                "tool": {"name": tool},
+                "arguments": {argument_key: argument_value},
+            },
+            {"seq": 1, "type": "agent_finished", "output": output, "status": status},
         ],
     }
     original, _, again = _round_trip(Trace, trace)
-    assert again == original
-    assert again.run_id == text
-    assert again.started_at == stamp
-    assert again.events[0].arguments == {text: text}
-    assert again.events[1].output == text
-    assert [ord(ch) for ch in again.run_id] == [ord(ch) for ch in text]
+    _assert_models_identical(original, again)
+    assert (again.run_id, again.scenario_id) == (run_id, scenario_id)
+    assert (again.started_at, again.ended_at) == (started, ended)
+    assert (again.agent.name, again.agent.version) == (agent, agent_version)
+    assert (again.adapter.name, again.adapter.version) == (adapter, adapter_version)
+    first, second = again.events
+    assert first.tool is not None and first.tool.name == tool
+    assert first.arguments == {argument_key: argument_value}
+    assert (second.output, second.status) == (output, status)
+    assert [ord(ch) for ch in again.run_id] == [ord(ch) for ch in run_id]
 
 
 @given(value=json_values())

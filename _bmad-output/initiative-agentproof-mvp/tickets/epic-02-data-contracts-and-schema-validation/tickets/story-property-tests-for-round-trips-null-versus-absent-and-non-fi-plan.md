@@ -49,7 +49,7 @@ context: []
 ## Code Map
 
 - `packages/python/tests/unit/models/strategies.py` -- new; `texts` (UTF-8 repertoire, combining-heavy alphabet, awkward samples), `json_values` (recursive, finite, `max_leaves=6`), `json_values_with_a_hole` (builder plus path; keys non-empty and dot-free), `timestamps`, `scenario_ids` (charset and device names), `argument_paths`, and the dict builders `suite_dicts(skipped=)`, `trace_dicts(presence=)`, `report_dicts`; `presence=False` omits every optional key, `None` draws each; strategies are `functools.cache`d because building a strategy per draw dominated run time.
-- `packages/python/tests/unit/models/test_properties.py` -- new; 22 properties, the fixed minimal Suite/Trace/Report the non-finite properties start from, and the `xfail(strict=True)` findings.
+- `packages/python/tests/unit/models/test_properties.py` -- new; 32 test cases (26 passing, 6 strict xfails for F1 to F3), the fixed minimal Suite/Trace/Report the non-finite properties start from, and the `xfail(strict=True)` findings.
 - `packages/python/tests/conftest.py` -- new; registers and loads the `agentproof` Hypothesis profile (`derandomize=True`, `database=None`, `deadline=None`).
 - `packages/python/pyproject.toml`, `packages/python/uv.lock` -- `hypothesis>=6.170` in the dev group (resolved 6.170.8, plus `sortedcontainers`).
 - `_bmad-output/initiative-agentproof-mvp/deferred-work.md` -- one entry for finding F2 (F1's entry is added by story 2.5's implementer).
@@ -96,15 +96,41 @@ Observed:
 - One `E501` in `strategies.py` fixed and `ruff format` rewrote one file before the green run.
 - Not verified here: Linux execution (the Windows run only); derandomized examples are the same on both platforms by construction but the Linux timing is unmeasured.
 
+**2026-10-23, review-pass-1 fixes (implementer, same worktree).** Coordinator review of PR #12, applied as asked:
+
+- Finding 1 (message substring check): `_assert_one_finite_error` now compares the error's structured context: exactly one error, `type == "finite_number"`, `loc` equal to the expected tuple, and `ctx == {"number": str(number), "path": <dotted hole path>}` (`PydanticCustomError`'s context, visible in `ValidationError.errors()`), replacing every `_inner_path_text(path) in msg`. For plain `JsonValue` fields (Suite input, detail, Comparison) the existing in-order `loc` check stays, now with a fixed two-hole case that also asserts the clean sibling key is absent from every location.
+- Finding 2 (broad xfails): F2 is one parametrized case per field (`capture.tool_calls` `literal_error`, `redaction.applied` `bool_type`, `redaction.paths` and `redaction.env_names` `tuple_type`); each body catches the `ValidationError`, asserts the error list equals exactly that one `(loc, type)`, then re-raises, so a partial fix turns exactly the fixed cases into strict XPASS failures and a different error fails with `AssertionError` instead of hiding. F1's body asserts the errors are `value_error` at `scenarios.<i>.skip` for exactly the Scenarios generated without `skip`.
+- Finding 4 (depth and two holes): fixed `test_non_finite_deep_in_a_trace_payload_names_the_exact_path` at depths 50 and 80 (dicts with a list index every tenth level), `test_non_finite_fifty_levels_deep_in_a_suite_input_is_located_by_the_path`, `test_two_holes_in_one_trace_payload_report_the_first_in_document_order`, `test_two_holes_in_different_trace_events_each_get_their_own_error`, and `test_two_holes_in_a_suite_input_are_both_located_and_the_clean_key_is_not`. Deepening exposed a new model finding, **F3**: finite, valid JSON nested about 100 levels or more is rejected (passes at 90, fails at 100) with `recursion_loop` plus one error per union branch (496 errors), while `json.loads` and `dumps` handle 150+ levels; the same for Suite input. Held as `test_finite_json_one_hundred_and_fifty_levels_deep_is_accepted` (`xfail(strict=True)`, body asserts the errors sit under `events.0.arguments` and include `recursion_loop`); `deferred-work.md` entry added, owner story 3.3 and the architect. The passing deep cases stop at 80, below the limit, so they do not depend on its exact value.
+- Finding 5 (type changes and cross-wiring): `_assert_identical` compares type at every node (so `1`, `1.0`, `True` differ) and `repr` for floats (`-0.0` versus `0.0`); `_assert_models_identical` applies it to both the Python-mode and JSON-mode dumps and is used by the Trace, Report, and Suite round trips and the `JsonValue` round trip. The Unicode property draws eleven pairwise-distinct strings (`st.lists(texts(), unique=True)`), one per field (`run_id`, `scenario_id`, agent and adapter name and version, tool, argument key and value, output, status), and asserts each field holds its own value.
+
+Verified after the fixes: `uv run check` exit 0 in 47 s wall (`ruff check` "All checks passed!", `ruff format --check` "49 files already formatted", `mypy --strict` "Success: no issues found in 23 source files", `lint-imports` "Contracts: 7 kept, 0 broken.", `pytest` 782 passed, 6 xfailed in 40 s); `uv run --python 3.12 --locked --isolated pytest tests/unit/models/test_properties.py -q -p no:cacheprovider` -> 26 passed, 6 xfailed in 48 s (55 s wall). The six xfails are F1 (1), F2 (4), F3 (1). Caches and `.hypothesis/` removed.
+
 ## Plan Change Log
 
-- None.
+- 2026-10-23, review pass 1: rules added beyond the frozen matrix: the structured `ctx` check for Trace payload errors, F2 split into four per-field cases with exact-location xfail bodies, F3 (`recursion_loop` beyond about 90 levels) as a third finding with its own strict xfail, the fixed deep and two-hole cases, strict type identity in the round trips, and distinct per-field strings in the Unicode property.
+
+## Review Triage Log
+
+### Review pass 1 (coordinator), 2026-10-23
+
+Eight items; five patched in this worktree, one confirmed with no action, three confirmed fine as they are.
+
+| # | Finding | Disposition | Evidence |
+| --- | --- | --- | --- |
+| 1 | "Message names the inner path" was a substring check that the message's own vocabulary could satisfy | patched: exact `loc`, `type`, and `ctx` (`number`, `path`) comparison | `_assert_one_finite_error`; the three Trace payload properties and the embedded-Trace property |
+| 2 | Both xfails accepted any `ValidationError`; F2 was one case for four fields | patched: F2 per field, every xfail body asserts the exact expected `(loc, type)` and re-raises | `test_explicit_null_for_a_nested_field_with_a_default_reads_as_absent[...]` (4 cases), `test_suite_with_an_unskipped_scenario_round_trips_through_canonical_dumps` |
+| 3 | F1's `deferred-work.md` entry lives on story 2.5's branch (PR #13) | no action: resolves through merge order; this PR adds only F2 and F3 entries | `deferred-work.md` |
+| 4 | Nesting depth only 0 to 3; no multi-hole case | patched: fixed depth 50/80 Trace cases, a 50-level Suite case, three two-hole cases; deeper input exposed F3 | `test_non_finite_deep_in_a_trace_payload_names_the_exact_path`, the `test_two_holes_*` cases, F3 test |
+| 5 | Equality could not see `1` versus `1.0` versus `True`, and shared text values hid cross-wiring | patched: `_assert_identical` / `_assert_models_identical` in every round trip; eleven distinct strings in the Unicode property | `_assert_models_identical` call sites; `test_generated_strings_survive_the_round_trip_exactly` |
+| 6 | Unicode placement only in fields with no charset rule | confirmed fine, no action | strategies unchanged |
+| 7 | Derandomized profile with no database | confirmed fine (known tradeoff: fixed examples, no accumulated failures), no action | `tests/conftest.py` |
+| 8 | Timing margin and runtime-dependency test | confirmed fine: hypothesis and sortedcontainers are dev-only and `test_runtime_dependencies_are_unchanged` passes, no action | `pyproject.toml`; `uv run check` |
 
 ## Verification
 
 **Commands:**
-- `cd packages/python && uv run check` -- expected: gate green, 776 passed, 2 xfailed
-- `cd packages/python && uv run --python 3.12 --locked --isolated pytest tests/unit/models/test_properties.py -q -p no:cacheprovider` -- expected: 20 passed, 2 xfailed
+- `cd packages/python && uv run check` -- expected: gate green, 782 passed, 6 xfailed
+- `cd packages/python && uv run --python 3.12 --locked --isolated pytest tests/unit/models/test_properties.py -q -p no:cacheprovider` -- expected: 26 passed, 6 xfailed
 - `git status --short` -- expected: this plan, `deferred-work.md`, `pyproject.toml`, `uv.lock`, `tests/conftest.py`, `strategies.py`, `test_properties.py`
 
 **Manual checks (if no CLI):**
