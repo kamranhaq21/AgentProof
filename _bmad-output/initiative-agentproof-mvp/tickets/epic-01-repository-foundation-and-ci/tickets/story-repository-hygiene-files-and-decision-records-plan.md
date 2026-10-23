@@ -3,7 +3,7 @@ title: 'Repository hygiene files and decision records'
 type: 'chore'
 ticket: '5'
 created: '2026-10-23'
-status: 'built'
+status: done
 baseline_revision: '5705d837a7ec210d65632779cc4dacef0b28d324'
 route: 'full'
 route_source: 'pinned'
