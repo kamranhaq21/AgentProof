@@ -597,11 +597,20 @@ F3 = (
 )
 
 
-@pytest.mark.xfail(strict=True, raises=ValidationError, reason=F3)
+@pytest.mark.xfail(strict=False, raises=ValidationError, reason=F3)
 def test_finite_json_one_hundred_and_fifty_levels_deep_is_accepted() -> None:
-    # xfail: finding F3 (see the story 2.6 plan; deferred-work.md). ``json.loads`` and
-    # ``dumps`` handle this depth; the model does not. The expected failure is exactly a
-    # ``recursion_loop`` under the payload, not any other error.
+    # xfail (non-strict): finding F3 (see the story 2.6 plan; deferred-work.md).
+    # ``json.loads`` and ``dumps`` handle this depth; on the implementer's machine
+    # (Windows, CPython 3.13) the model did not, failing around depth 100. CI then
+    # showed this threshold is itself platform-dependent: on Linux/CPython 3.12.3 this
+    # exact 150-level payload validates fine (XPASS), almost certainly because
+    # pydantic-core's recursive-validation depth limit rides on the native C stack,
+    # and POSIX threads default to a larger stack than Windows threads. ``strict`` is
+    # therefore off: an XPASS here is not itself a regression to fail the build over,
+    # only the threshold moving, which is exactly the kind of platform noise F3's
+    # eventual fix (a documented, enforced depth limit, story 3.3 + architect) should
+    # replace with a limit that behaves the same everywhere. When fixed, this test can
+    # go back to asserting the real validation outcome directly.
     value: JsonValue = 1
     for level in range(150):
         value = [0, value] if level % 10 == 9 else {"k": value}
