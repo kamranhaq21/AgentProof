@@ -26,9 +26,10 @@ uv run check
 
 This is the whole quality gate and the only one. It runs, in order, `ruff check` (plus
 the AST purity checker for the core packages), `ruff format --check`, `mypy --strict`,
-`lint-imports`, and `pytest`, and stops at the first failure. CI (story 1.4, not yet in place) will call the same
-entry point and nothing else for its check stage, so a change that passes `uv run check`
-locally is a change CI accepts.
+`lint-imports`, and `pytest`, and stops at the first failure. CI
+(`.github/workflows/ci.yml`) calls the same entry point and nothing else for its check
+stage, on Linux and Windows across Python 3.12 to 3.15, so a change that passes
+`uv run check` locally is a change CI accepts.
 
 Optional: `uvx pre-commit install` installs the ruff hooks from `.pre-commit-config.yaml`
 as a fast pre-commit subset of the gate. They never replace `uv run check`.
@@ -37,7 +38,13 @@ as a fast pre-commit subset of the gate. They never replace `uv run check`.
 
 The rules come from `PROJECT_SPEC.md` section 13.2:
 
-- `main` stays releasable at all times.
+- `main` stays releasable at all times. It is protected: nothing lands on it except
+  through a pull request, and the pull request merges only when the CI workflow's eight
+  `check` jobs (two runners by four Python versions) are green. The rule requires no
+  approvals and is not enforced on administrators, so the solo maintainer is never
+  locked out, but the CI check is never skipped.
+- `backlog` is the integration branch. Story branches (`story/<n>-<slug>`) open their
+  pull request against `backlog`; `backlog` lands on `main` through a pull request.
 - Work on short-lived feature branches.
 - Open a pull request even when working alone; the PR is the review history.
 - Keep commits small and descriptive.
