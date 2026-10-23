@@ -19,5 +19,6 @@ def test_version_equals_pyproject_version() -> None:
     assert agentproof.__version__ == pyproject_version
 
 
-def test_public_api_is_exactly_version() -> None:
-    assert agentproof.__all__ == ["__version__"]
+def test_version_is_in_the_public_api() -> None:
+    # The full name list is pinned in test_public_api.py.
+    assert "__version__" in agentproof.__all__
