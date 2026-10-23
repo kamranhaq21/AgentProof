@@ -12,8 +12,9 @@ already taken by another agent-testing package, so the distribution name declare
 `packages/python/pyproject.toml` (`name = "agentproof"`) is provisional. It builds and
 installs from a wheel path today, but it cannot be published under that name.
 
-Until this record carries a decision, nothing in the repository writes an install
-command by name or a final distribution name (AGENTS.md policy). Publishing is gated in
+Until this record carries a decision, nothing in the repository publishes to an index
+or writes a public install-by-name command; installs come from the built wheel path, as
+CI's `smoke` job does (AGENTS.md policy, refreshed 2026-10-23). Publishing is gated in
 epic 9.
 
 ## Candidates
