@@ -36,3 +36,6 @@
 - source: story 2.5 (generated JSON Schemas), 2026-10-23
   summary: an unsupported `version` is `literal_error` for a Suite (story 2.2 chose `Literal[1]`) but `unsupported_version` for a Trace and a Report, so the loaders cannot key on one code; decide one code across the three models (a validation change, hence a cross-model decision). The fixtures `suite__literal_error__version` and `trace__unsupported_version__version` name what each model raises today.
   owner: story 2.7 (refactor sweep).
+- source: story 3.2 (safe YAML loader), 2026-10-23
+  summary: AGENTS.md's managed block still says "Parse YAML with yaml.safe_load only (the one SafeLoader subclass of ADR-019)"; the actual entry point is loading.yaml_safe.load, never yaml.safe_load directly. Reword to "Parse YAML only through agentproof.loading.yaml_safe.load (one SafeLoader subclass); never yaml.safe_load or yaml.load directly" at the next bmad-project-context refresh.
+  owner: maintainer / next AGENTS.md refresh.
