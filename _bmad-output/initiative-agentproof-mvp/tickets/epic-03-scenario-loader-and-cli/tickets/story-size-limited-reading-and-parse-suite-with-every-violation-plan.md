@@ -3,7 +3,7 @@ title: 'Size-limited reading and parse_suite with every violation'
 type: 'feature'
 ticket: '3'
 created: '2026-10-23'
-status: 'built'
+status: done
 baseline_revision: '39307b3b9675020011ab62dc231c05b36c6babd3'
 route: 'full'
 route_source: 'pinned'
