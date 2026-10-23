@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+# Development-only workspace member (architecture ARCH-4 decision, story 1.2). It
+# provides the single `check` entry point (AD-17) and is never part of the shipped
+# `agentproof` wheel: it is reachable only through the dev dependency group.
+name = "agentproof-devtools"
+version = "0.0.0"
+description = "Development tooling for AgentProof: the single `check` entry point."
+requires-python = ">=3.12,<4"
+dependencies = []
+
+[project.scripts]
+check = "agentproof_devtools.check:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentproof_devtools"]

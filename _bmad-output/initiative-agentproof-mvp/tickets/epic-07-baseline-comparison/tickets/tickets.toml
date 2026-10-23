@@ -1,0 +1,35 @@
+# Epic 7: Baseline comparison. Table order is build order.
+
+[[entry]]
+id = 1
+type = "story"
+title = "parse_report and load_report with version dispatch"
+description = "Extends loading.report (created in epic 6 story 3) with dispatch on the integer version to the version-1 model through an upgrade_to_latest stub, and the unsupported-version and size-limit paths."
+verify = "load_report on the run's report.json returns a Report equal to the one built; a version 2 file raises UnsupportedVersionError naming both versions; a non-Report JSON raises with a field path."
+covers = ["R1"]
+after = ["6.3"]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 2
+type = "story"
+title = "compare produces a Comparison"
+description = "Adds compare.compare(baseline, current) with status, Assertion-id, tool-sequence, selected-argument, and Scenario-set differences, volatile paths excluded, duration and cost only when both present, and regressed set only on passed to failed or error, plus dumps_comparison."
+verify = "Comparing a Report with itself yields no differences; a passed-to-failed Scenario sets regressed; a sequence-only change is listed and regressed stays false; an argument outside include_arguments is ignored."
+covers = ["R2"]
+after = [1]
+hitl = false
+risk = "medium"
+references = ["_bmad-output/initiative-agentproof-mvp/architecture-agentproof/architecture-agentproof.md#ad-11--canonical-form-compact-form-and-volatile-paths"]
+
+[[entry]]
+id = 3
+type = "story"
+title = "compare command with its exit mapping and statement"
+description = "Wires compare BASELINE_REPORT CURRENT_REPORT [--output FILE] printing the summary with the saved-data statement, writing the Comparison JSON on request, and exiting through from_comparison."
+verify = "compare on identical Reports exits 0; on a regressed current Report exits 1 naming the Scenario; on a non-Report file exits 2; the summary contains the saved-data statement."
+covers = ["R3"]
+after = [2]
+hitl = false
+risk = "low"

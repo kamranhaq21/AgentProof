@@ -1,0 +1,22 @@
+# Pre-commit hooks (story 1.5): ruff check and ruff format only. The full quality gate
+# is `uv run check` in packages/python (CONTRIBUTING.md); these hooks are the fast
+# subset of it. Install with `uvx pre-commit install`.
+#
+# Both hooks are scoped to packages/python/, the only tree the gate checks; files under
+# .agents/ and _bmad/ are tool-managed and must not be rewritten.
+# `rev` must equal the ruff version locked in packages/python/uv.lock;
+# tests/unit/test_repo_hygiene.py fails when they drift.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.2
+    # No `--config` argument on purpose: pre-commit runs from the repository root, and
+    # with an explicit `--config <file>` ruff resolves `per-file-ignores` and `src`
+    # against the working directory, so `devtools/**` and `tests/**` stop matching and
+    # TID251 fires on shell code. Without it ruff discovers the nearest pyproject.toml
+    # (packages/python/pyproject.toml) per file and resolves those patterns against it.
+    hooks:
+      - id: ruff-check
+        # No --fix: the hook reports, it never rewrites.
+        files: ^packages/python/
+      - id: ruff-format
+        files: ^packages/python/

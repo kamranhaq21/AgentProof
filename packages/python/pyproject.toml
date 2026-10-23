@@ -1,0 +1,88 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+# Provisional pending OQ-1: the PyPI project `agentproof` is taken by another
+# agent-testing package. See docs/decisions/0000-distribution-name.md. The import
+# name `agentproof` is settled; only the distribution name is open.
+name = "agentproof"
+version = "0.1.0.dev0"
+description = "Local-first, framework-neutral testing and regression framework for tool-using AI agents."
+requires-python = ">=3.12,<4"
+dependencies = [
+    "pydantic>=2.14,<3",
+    "typer>=0.27,<1",
+    "rich>=15,<16",
+    "pyyaml>=6.0.3,<7",
+]
+
+[project.scripts]
+agentproof = "agentproof.cli.app:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1",
+    "ruff>=0.17",
+    "mypy>=2.4",
+    "import-linter>=2.15",
+    # Workspace member providing `uv run check` (story 1.2, ARCH-4). A dev
+    # dependency only; it is never part of the shipped `agentproof` wheel.
+    "agentproof-devtools",
+]
+
+[tool.uv.workspace]
+members = ["devtools"]
+
+[tool.uv.sources]
+agentproof-devtools = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentproof"]
+
+[tool.hatch.build.targets.sdist]
+# The source archive is a release asset (release-draft.yml). It carries what builds the
+# wheel plus the project files; the devtools workspace member and the test suite stay
+# in the repository (tests/integration/test_install_smoke.py checks this).
+exclude = ["/devtools", "/tests"]
+
+[tool.ruff]
+line-length = 100
+# Both source roots, so ruff sorts `agentproof_devtools` as first-party like `agentproof`.
+src = [".", "src", "devtools/src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "TID"]
+
+# Architecture AD-1: core code never touches the clock, the environment, the network,
+# the filesystem, or concurrency. TID251 bans the importable names; the AST purity
+# checker in devtools (run inside the `ruff check` step) covers bare `open(` and
+# `pathlib.Path` I/O methods, which are not imports. The shell packages below are exempt.
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"os.environ".msg = "core code never reads the environment (AD-1); take it as an argument from the shell"
+"os.getenv".msg = "core code never reads the environment (AD-1); take it as an argument from the shell"
+"os.getcwd".msg = "core code never reads the working directory (AD-1); paths come from the io package"
+"os.stat".msg = "core code never touches the filesystem (AD-1); the io package reads paths"
+"time".msg = "core code never reads the clock (AD-1); the runner passes timestamps in"
+"datetime.datetime.now".msg = "core code never reads the clock (AD-1); the runner passes timestamps in"
+"datetime.datetime.today".msg = "core code never reads the clock (AD-1); the runner passes timestamps in"
+"uuid".msg = "core code never generates identity (AD-1); the runner owns run identity"
+"random".msg = "core code is deterministic (AD-1); no randomness in core"
+"socket".msg = "core code never touches the network (AD-1)"
+"subprocess".msg = "core code never shells out (AD-1)"
+"threading".msg = "core code is single-threaded and pure (AD-1); concurrency belongs to the shell"
+"asyncio".msg = "core code is synchronous and pure (AD-1); concurrency belongs to the shell"
+
+[tool.ruff.lint.per-file-ignores]
+# Effectful shell packages, the devtools workspace member, and tests may use the names.
+"src/agentproof/{adapters,runner,io,cli,testing}/**" = ["TID251"]
+"devtools/**" = ["TID251"]
+"tests/**" = ["TID251"]
+
+[tool.mypy]
+strict = true
+plugins = ["pydantic.mypy"]
+files = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

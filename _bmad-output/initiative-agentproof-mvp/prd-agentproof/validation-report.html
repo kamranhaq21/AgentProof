@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<!--
+  PRD Validation Report — skeleton template.
+
+  This file is a starter the synthesis pass fills in directly. There is no
+  substitution engine. The LLM:
+    1. Reads {doc_workspace}/review-rubric.md and every review-{lens}.md from
+       additional reviewers.
+    2. Copies this skeleton.
+    3. Replaces the placeholder content (everything between TEMPLATE markers)
+       with the consolidated review, preserving the structure and CSS.
+    4. Writes the result to {doc_workspace}/validation-report.html.
+    5. Writes a markdown twin to {doc_workspace}/validation-report.md.
+
+  Visual rules the LLM must preserve:
+    - The container width, the color tokens, the typography.
+    - One dimension = one collapsible <section class="dimension">.
+    - Verdict pill uses the verdict-* class matching its judgment.
+    - Severity badge uses the sev-* class matching its level.
+    - Each extra reviewer (adversarial, etc.) gets its own collapsible section
+      below the rubric dimensions.
+    - The footer always shows the artifact paths and timestamp.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PRD Validation: AgentProof v0.1</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --border: #e7e5e4;
+    --text: #1c1917;
+    --muted: #78716c;
+
+    --verdict-strong: #16a34a;
+    --verdict-adequate: #65a30d;
+    --verdict-thin: #d97706;
+    --verdict-broken: #dc2626;
+
+    --sev-low: #64748b;
+    --sev-medium: #ca8a04;
+    --sev-high: #ea580c;
+    --sev-critical: #dc2626;
+
+    --grade-exc: #16a34a;
+    --grade-good: #65a30d;
+    --grade-fair: #d97706;
+    --grade-poor: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    font-size: 15px;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 24px 64px; }
+
+  header.report-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .title h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .title .subtitle { color: var(--muted); font-size: 13px; margin-top: 4px; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  .grade {
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    color: white;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  .grade-excellent { background: var(--grade-exc); }
+  .grade-good { background: var(--grade-good); }
+  .grade-fair { background: var(--grade-fair); }
+  .grade-poor { background: var(--grade-poor); }
+
+  .synthesis {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--muted);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .synthesis p { margin: 0 0 10px; }
+  .synthesis p:last-child { margin-bottom: 0; }
+
+  .dimension-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .dim-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .dim-card .dim-name { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .dim-card .dim-verdict { font-size: 14px; font-weight: 600; }
+
+  section.dimension, section.reviewer-section { margin-bottom: 14px; }
+  section.dimension details, section.reviewer-section details {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  section summary {
+    padding: 14px 20px;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  section summary::-webkit-details-marker { display: none; }
+  section summary::before {
+    content: "▸";
+    display: inline-block;
+    color: var(--muted);
+    transition: transform 0.15s ease;
+  }
+  section details[open] summary::before { transform: rotate(90deg); }
+  section summary h2 {
+    display: inline;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    flex: 1;
+  }
+  .verdict-pill {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: white;
+  }
+  .verdict-strong { background: var(--verdict-strong); }
+  .verdict-adequate { background: var(--verdict-adequate); }
+  .verdict-thin { background: var(--verdict-thin); }
+  .verdict-broken { background: var(--verdict-broken); }
+
+  .dim-body { padding: 4px 20px 18px; }
+  .dim-judgment { color: var(--text); font-size: 14.5px; }
+  .dim-judgment p { margin: 0 0 10px; }
+
+  .findings-list { padding: 0 20px 4px; }
+  article.finding {
+    padding: 14px 0;
+    border-top: 1px solid var(--border);
+  }
+  article.finding:first-child { border-top: none; }
+  article.finding header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .badge {
+    font-size: 10.5px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+  }
+  .badge-sev-low { background: rgba(100, 116, 139, 0.12); color: var(--sev-low); }
+  .badge-sev-medium { background: rgba(202, 138, 4, 0.14); color: var(--sev-medium); }
+  .badge-sev-high { background: rgba(234, 88, 12, 0.14); color: var(--sev-high); }
+  .badge-sev-critical { background: rgba(220, 38, 38, 0.14); color: var(--sev-critical); }
+  .finding-title { margin: 0; font-size: 15px; font-weight: 500; flex: 1; min-width: 200px; }
+  .finding-location { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; color: var(--muted); }
+  .finding-note, .finding-fix { margin-top: 6px; font-size: 14px; }
+  .finding-fix strong { color: var(--muted); font-weight: 500; }
+
+  .reviewer-source {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  .mechanical {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-top: 24px;
+    font-size: 14px;
+  }
+  .mechanical h3 { margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .mechanical ul { margin: 0; padding-left: 20px; }
+  .mechanical li { margin-bottom: 4px; color: var(--text); }
+
+  footer.report-footer {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  footer .meta { display: flex; gap: 24px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <header class="report-header">
+      <div class="title">
+        <h1>AgentProof v0.1 — Validation Report</h1>
+        <div class="subtitle">_bmad-output/initiative-agentproof-mvp/prd-agentproof/prd-agentproof.md</div>
+      </div>
+      <div class="grade grade-excellent">Excellent</div>
+    </header>
+
+    <div class="synthesis">
+      <p>The PRD went through three reviews in this run: a first rubric walk and a spec reconciliation against the initial draft, an adversarial review against the same draft (2 critical, 7 high), and a final rubric re-walk after both fix passes. The re-walk rates all seven dimensions strong and finds no critical or high issues. Of the 14 prior critical and high findings, 13 were resolved as product decisions (Canonical form, Capture declaration, Baseline-is-a-Report, Exit Code precedence, first-occurrence <code>tool_order</code>, duplicate-key and alias rejection, CSP and no-linkify HTML, Redaction at Trace ingress) and the one partial, the Exit Code for an absent Trace, was closed in the finalize pass.</p>
+      <p>The three medium findings from the re-walk were applied before this report was written, along with ten of the twelve low findings. The adversarial reviewer's broader point stands and is recorded in §8 of the PRD: the competitive wedge is narrower than the spec assumed, and the pivot criterion before EPIC E is the maintainer's commitment to act on that.</p>
+    </div>
+
+    <div class="dimension-summary">
+      <div class="dim-card"><div class="dim-name">Decision-readiness</div><div class="dim-verdict" style="color: var(--verdict-strong)">strong</div></div>
+      <div class="dim-card"><div class="dim-name">Substance over theater</div><div class="dim-verdict" style="color: var(--verdict-strong)">strong</div></div>
+      <div class="dim-card"><div class="dim-name">Strategic coherence</div><div class="dim-verdict" style="color: var(--verdict-strong)">strong</div></div>
+      <div class="dim-card"><div class="dim-name">Done-ness clarity</div><div class="dim-verdict" style="color: var(--verdict-strong)">strong</div></div>
+      <div class="dim-card"><div class="dim-name">Scope honesty</div><div class="dim-verdict" style="color: var(--verdict-strong)">strong</div></div>
+      <div class="dim-card"><div class="dim-name">Downstream usability</div><div class="dim-verdict" style="color: var(--verdict-strong)">strong</div></div>
+      <div class="dim-card"><div class="dim-name">Shape fit</div><div class="dim-verdict" style="color: var(--verdict-strong)">strong</div></div>
+    </div>
+
+    <section class="dimension"><details>
+      <summary><h2>Decision-readiness</h2><span class="verdict-pill verdict-strong">strong</span></summary>
+      <div class="dim-body"><div class="dim-judgment"><p>Decisions are stated as decisions and the trade-offs are named. §1 names the bet and ties it to OQ-19; §6.2 picks v0.2 for JUnit and says why; AC-21.4 states the Adapter default; NFR-8 records the withdrawn <code>major.minor</code> lean. §8 carries a pivot criterion with a threshold and gate point. The 19 Open Questions are genuinely open, five carry phase-blocker marks, and each names what it blocks.</p></div></div>
+      <div class="findings-list">
+        <article class="finding"><header><span class="badge badge-sev-low">low</span><h3 class="finding-title">Interview gate stated at two points</h3><span class="finding-location">§8 pivot vs H1 row and H6 note</span></header><div class="finding-note">Readers of the table and of the pivot paragraph saw different deadlines.</div><div class="finding-fix"><strong>Fix:</strong> Applied: all three now say before EPIC E starts.</div></article>
+        <article class="finding"><header><span class="badge badge-sev-low">low</span><h3 class="finding-title">OQ-3 did not name the cost of the exit-3 rule</h3><span class="finding-location">OQ-3, AC-27.3</span></header><div class="finding-note">A single Adapter raise masks Assertion failures in the Exit Code.</div><div class="finding-fix"><strong>Fix:</strong> Applied: trade-off and alternative written into OQ-3.</div></article>
+      </div>
+    </details></section>
+
+    <section class="dimension"><details>
+      <summary><h2>Substance over theater</h2><span class="verdict-pill verdict-strong">strong</span></summary>
+      <div class="dim-body"><div class="dim-judgment"><p>No furniture. The four journeys are CLI flows whose situation determines FRs, and each "Realized by" list matches its narrative. Differentiation is handled by refutation with a hand-verification step before any comparative claim. NFRs carry product-specific bounds and verification methods.</p></div></div>
+      <div class="findings-list">
+        <article class="finding"><header><span class="badge badge-sev-low">low</span><h3 class="finding-title">SM-6 unscored</h3><span class="finding-location">§7 SM-6</span></header><div class="finding-note">"Useful" had no definition.</div><div class="finding-fix"><strong>Fix:</strong> Applied: reports that reproduce, or requests that lead to a merged change or an accepted §6.2 item.</div></article>
+      </div>
+    </details></section>
+
+    <section class="dimension"><details>
+      <summary><h2>Strategic coherence</h2><span class="verdict-pill verdict-strong">strong</span></summary>
+      <div class="dim-body"><div class="dim-judgment"><p>The thesis is stated in §1 and §4 maps onto it one-to-one: Trace answers "what did my agent do", Assertions answer "did it follow my explicit rules", Baseline and Comparison answer "did the latest change make it worse". Primary metrics validate the thesis and the three counter-metrics name the failure modes of an OSS launch. No findings.</p></div></div>
+    </details></section>
+
+    <section class="dimension"><details>
+      <summary><h2>Done-ness clarity</h2><span class="verdict-pill verdict-strong">strong</span></summary>
+      <div class="dim-body"><div class="dim-judgment"><p>35 FRs (two deliberate stubs) and over 110 ACs, nearly all phrased as observable outcomes with Exit Codes, message content, or byte identity. The semantic holes the earlier reviews found in the Assertion engine, Report, Baseline, Redaction, HTML escaping, YAML loading, output paths, and determinism are each closed with a specific AC and, where it mattered, a named test fixture.</p></div></div>
+      <div class="findings-list">
+        <article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Absent Trace had two candidate Exit Codes</h3><span class="finding-location">AC-18.2, AC-18.5, AC-27.3</span></header><div class="finding-note">A renamed Trace directory in CI could exit 1 by AC-18.5 and 3 by AC-27.3.</div><div class="finding-fix"><strong>Fix:</strong> Applied: absent Trace with <code>fail_on_missing_trace: true</code> is an execution failure (exit 3); with <code>false</code> it is a skip; AC-18.5 defers to AC-27.3.</div></article>
+        <article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Scenario-id file names collide on case-insensitive filesystems and admit Windows device names</h3><span class="finding-location">AC-2.5, AC-3.1, AC-29.1</span></header><div class="finding-note"><code>Reject</code> and <code>reject</code> overwrite each other's Trace file on Windows and macOS; <code>NUL</code> stays a device name with a suffix.</div><div class="finding-fix"><strong>Fix:</strong> Applied: AC-2.5 requires case-insensitive uniqueness and rejects reserved device names.</div></article>
+        <article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Nothing produced the HTML Report UJ-1 opens; <code>report</code> had no output location</h3><span class="finding-location">FR-23, FR-32</span></header><div class="finding-note">The workflow uploaded the Output Directory without running <code>report</code>.</div><div class="finding-fix"><strong>Fix:</strong> Applied: FR-32 renders the HTML Report before upload; AC-32.1 checks the artifact; AC-23.6 defines where <code>report</code> writes.</div></article>
+        <article class="finding"><header><span class="badge badge-sev-low">low</span><h3 class="finding-title">AC-18.1 made all-skipped <code>passed</code>; AC-18.5 absent from the FR-27 table</h3><span class="finding-location">AC-18.1, FR-27</span></header><div class="finding-note">Clause order and an undefined "required".</div><div class="finding-fix"><strong>Fix:</strong> Applied: AC-18.1 reordered with Suite Status precedence; FR-27 codes 0 and 1 reworded.</div></article>
+        <article class="finding"><header><span class="badge badge-sev-low">low</span><h3 class="finding-title">AC-21.5, AC-28.2, and AC-19.4 test wording imprecise</h3><span class="finding-location">AC-21.5, AC-28.2, AC-19.4</span></header><div class="finding-note">Conformance suite claimed to verify the unobservable; key-based Redaction implied to reach exception text; Replay Report could overwrite the <code>run</code> Report.</div><div class="finding-fix"><strong>Fix:</strong> Applied to all three.</div></article>
+      </div>
+    </details></section>
+
+    <section class="dimension"><details>
+      <summary><h2>Scope honesty</h2><span class="verdict-pill verdict-strong">strong</span></summary>
+      <div class="dim-body"><div class="dim-judgment"><p>§5 does real work and the <code>[NON-GOAL for MVP]</code> tags sit where silent assumption was likely. All 34 inline assumptions are indexed and each is a stated default with a pointer where an Open Question exists. Only OQ-1 (name) and OQ-2 (license) lack a default; both are launch gates, not build gates.</p></div></div>
+      <div class="findings-list">
+        <article class="finding"><header><span class="badge badge-sev-low">low</span><h3 class="finding-title">Scenario selection on <code>run</code> silently absent; multi-document YAML unspecified</h3><span class="finding-location">FR-30, FR-1</span></header><div class="finding-note">Users will assume <code>-k</code>-style selection exists; a second <code>---</code> document had no defined behavior.</div><div class="finding-fix"><strong>Fix:</strong> Applied: selection listed in §6.2 as v0.2; AC-1.6 rejects multi-document files.</div></article>
+      </div>
+    </details></section>
+
+    <section class="dimension"><details>
+      <summary><h2>Downstream usability</h2><span class="verdict-pill verdict-strong">strong</span></summary>
+      <div class="dim-body"><div class="dim-judgment"><p>All four "Realized by" lists match their narratives; Assertion id, Suite Status, Capture declaration, Canonical form, Output Directory, Suite defaults, and Final Output are Glossary terms used consistently; the Assumptions Index round-trips; FR ids are stable with two deliberate stubs; §8 defines the EPIC letters so the Product Owner can map them.</p></div></div>
+      <div class="findings-list">
+        <article class="finding"><header><span class="badge badge-sev-low">low</span><h3 class="finding-title">AC-16.2 term aligned to "Canonical form"; whitespace consequence for substring matching left open</h3><span class="finding-location">AC-16.2, OQ-9</span></header><div class="finding-note">Pretty-printed Canonical form means multi-line substrings must respect indentation.</div><div class="finding-fix"><strong>Fix:</strong> Open: state the consequence in the Assertion reference or define a compact variant for AC-16.2 (OQ-9).</div></article>
+        <article class="finding"><header><span class="badge badge-sev-low">low</span><h3 class="finding-title">Addendum §B lists <code>storage/interface</code> which §6.2 defers</h3><span class="finding-location">addendum §B</span></header><div class="finding-note">Non-binding, but an architect might scaffold it.</div><div class="finding-fix"><strong>Fix:</strong> Open: the architecture spine should not scaffold storage in v0.1.</div></article>
+      </div>
+    </details></section>
+
+    <section class="dimension"><details>
+      <summary><h2>Shape fit</h2><span class="verdict-pill verdict-strong">strong</span></summary>
+      <div class="dim-body"><div class="dim-judgment"><p>Capability-spec shape with four load-bearing CLI journeys is right for a Python library and CLI feeding architecture and stories. Success Metrics are adoption and operational with manual measurement, matching an OSS launch with no telemetry. At roughly 520 lines for 35 FRs and 10 NFRs it meets "concise enough to be usable"; growth since the first draft is almost entirely ACs that close real holes. No findings.</p></div></div>
+    </details></section>
+
+    <section class="reviewer-section"><details>
+      <summary><h2>Adversarial review (first draft)</h2><span class="reviewer-source">review-adversarial-general.md</span></summary>
+      <div class="dim-body"><div class="dim-judgment"><p>Verdict as written: "The PRD is well-structured and honest about assumptions, but the two things a CI user depends on most (exit code and 'secrets never leak') are specified by mutually contradictory ACs, and several absolute claims ('byte-identical', 'zero network', 'every string escaped') are verified by a single example test; the determinism/Replay caveats in §4.6/§5 are undercut by §1, UJ-2 and UJ-3." All critical and high findings below are resolved in the final PRD; see review-rubric.md "Resolution of prior findings".</p></div></div>
+      <div class="findings-list">
+        <article class="finding"><header><span class="badge badge-sev-critical">critical</span><h3 class="finding-title">Exit code for <code>error</code> unresolvable from the Status model</h3><span class="finding-location">FR-27, AC-27.2, AC-21.3</span></header><div class="finding-note">Status carried no cause; five concrete Suites yielded two or three candidate codes each.</div><div class="finding-fix"><strong>Fix:</strong> Resolved: AC-27.3 and AC-27.4 define execution failure versus evaluation error and a full precedence.</div></article>
+        <article class="finding"><header><span class="badge badge-sev-critical">critical</span><h3 class="finding-title">Redaction ACs promised value-based secrecy while the FR was key-based at write time</h3><span class="finding-location">FR-31, AC-31.3, AC-28.2, AC-19.2</span></header><div class="finding-note">A secret in free-text Final Output could not be caught; live and Replay evaluated different Traces.</div><div class="finding-fix"><strong>Fix:</strong> Resolved: Redaction at Trace ingress, key-based plus declared environment values, limits documented.</div></article>
+        <article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title"><code>skipped</code> unreachable; all-skipped turned CI green</h3><span class="finding-location">AC-18.1, AC-18.2, FR-27</span></header><div class="finding-note">A renamed Trace directory produced all-skipped Scenarios and exit 0.</div><div class="finding-fix"><strong>Fix:</strong> Resolved: two named producers; zero-evaluation run exits 1 (AC-18.5).</div></article>
+        <article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Absence proof depended on unrecorded Adapter capture completeness</h3><span class="finding-location">FR-12, FR-21, FR-5</span></header><div class="finding-note"><code>tool_not_called</code> passed vacuously when an Adapter missed a call.</div><div class="finding-fix"><strong>Fix:</strong> Resolved: Capture declaration (AC-5.6, AC-12.4, AC-21.5).</div></article>
+        <article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title"><code>compare</code> input type undefined; Report lacked sequence data</h3><span class="finding-location">FR-22, FR-25, FR-26</span></header><div class="finding-note">"Selected arguments" had no selector.</div><div class="finding-fix"><strong>Fix:</strong> Resolved: Reports embed Events; both operands are Reports; <code>compare.include_arguments</code>.</div></article>
+        <article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">"Byte-identical" had no oracle that survives Windows</h3><span class="finding-location">AC-6.2, AC-22.2, NFR-1</span></header><div class="finding-note">Encoding, CRLF, autocrlf, run id, float repr, and cost were unaddressed.</div><div class="finding-fix"><strong>Fix:</strong> Resolved: Canonical form in §3; NFR-1 golden files with .gitattributes on Linux and Windows.</div></article>
+        <article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">HTML safety verified by one vector; YAML duplicate keys and alias bombs; FR-29 rejected legitimate CI paths and atomic write failed on Windows</h3><span class="finding-location">AC-23.2, FR-1, FR-29</span></header><div class="finding-note">Three further high findings on verification strength.</div><div class="finding-fix"><strong>Fix:</strong> Resolved: vector corpus, CSP, no-linkify (AC-23.2); AC-1.4 and AC-1.5; FR-29 rewritten with the Windows failure mode.</div></article>
+      </div>
+    </details></section>
+
+    <section class="reviewer-section"><details>
+      <summary><h2>Spec reconciliation (first draft)</h2><span class="reviewer-source">reconcile-project-spec.md</span></summary>
+      <div class="dim-body"><div class="dim-judgment"><p>PROJECT_SPEC.md versus the PRD within v0.1 scope: 15 gaps, 6 weakenings, 4 contradictions, 16 PRD claims not in the spec (5 needing tags). All high and medium items were applied: a public Python API FR (FR-34), Trace persistence by <code>run</code> (AC-6.4), Events embedded in Reports (AC-22.4), the exit-3 contradiction resolved in the spec's favor, Adapter event completeness (AC-21.5), Event-level duration and error fields, the viewer requirements carried as a stub (FR-35), the secrets rule broadened beyond configured keys (AC-28.2), the end-to-end acceptance chain and Definition of Done inheritance (NFR-9, §0), and five untagged claims tagged and indexed.</p></div></div>
+    </details></section>
+
+    <div class="mechanical">
+      <h3>Mechanical notes</h3>
+      <ul>
+        <li>Glossary: Scenario lists <code>skip</code>; AC-16.2 uses "Canonical form"; §11 Suite defaults entry lists <code>redact</code>.</li>
+        <li>IDs: FR-1 to FR-35 contiguous (FR-24, FR-35 deliberate stubs); ACs contiguous within each FR; UJ, SM, NFR, OQ, and H series contiguous; OQ items carry their id inline.</li>
+        <li>Cross-references: all UJ "Realized by" lists match; SM-2 cites FR-27 and FR-32; addendum §C agrees with AC-27.3 and NFR-8; external references resolve.</li>
+        <li>Assumptions Index: 34 inline tags, 34 entries, one-to-one.</li>
+        <li>UJ protagonists: Dana, Marcus, Priya, Lee, with role and context inline.</li>
+      </ul>
+    </div>
+
+    <footer class="report-footer">
+      <div class="meta">
+        <span>Rubric: .agents/skills/bmad-prd/assets/prd-validation-checklist.md</span>
+        <span>Generated: 2026-10-22T18:30:00+05:00</span>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

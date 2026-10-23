@@ -1,0 +1,24 @@
+# Editor defaults (story 1.5). Line endings in the repository are governed by
+# .gitattributes; this file keeps editors from fighting it.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+
+[*.py]
+indent_size = 4
+
+[*.{yaml,yml,toml,json}]
+indent_size = 2
+
+[*.md]
+indent_size = 2
+# Two trailing spaces are a hard line break in Markdown.
+trim_trailing_whitespace = false
+
+[*.bat]
+end_of_line = crlf

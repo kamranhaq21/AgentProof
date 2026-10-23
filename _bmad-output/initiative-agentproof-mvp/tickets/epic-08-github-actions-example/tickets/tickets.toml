@@ -1,0 +1,35 @@
+# Epic 8: GitHub Actions example. Table order is build order.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Example workflow runs the Suite and uploads Reports on success and failure"
+description = "Adds .github/workflows/agentproof-example.yml with checkout, Python setup, install from the built wheel, run, report --format html, upload-artifact with if always, SHA-pinned actions, least privilege, and failure on non-zero exit, running in this repository's CI against the example."
+verify = "The workflow is green on the passing example, and a test branch that breaks a Scenario shows it red with report.json, report.html, and the Trace files in the uploaded artifact."
+covers = ["R1"]
+after = ["1.6", "6.3"]
+hitl = false
+risk = "medium"
+references = ["_bmad-output/initiative-agentproof-mvp/architecture-agentproof/architecture-agentproof.md#ad-17--determinism-and-security-are-tests-and-one-check-entry-point-mirrors-ci"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Integration docs: CI without credentials and artifact visibility"
+description = "Adds docs/integrations.md walking through the workflow, how to run with saved Traces and the Fixture Agent, and the statement that uploaded artifacts are visible to anyone with read access to Actions, using the fixed statement constants."
+verify = "The page's fenced agentproof-doctest blocks match the workflow's commands, and the artifact-visibility statement is present verbatim from constants.STATEMENTS."
+covers = ["R2"]
+after = [1]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 3
+type = "story"
+title = "End-to-end acceptance test of the spec chain"
+description = "Adds tests/e2e/test_acceptance.py running install, init, passing run, failing run, report, replay without credentials, compare against a Baseline, and a planted-secret grep over every artifact, against the built wheel in a clean venv, wired into CI."
+verify = "The acceptance test passes on Linux and Windows CI and fails when any one step is broken on purpose."
+covers = ["R3"]
+after = [1, "7.3"]
+hitl = false
+risk = "medium"

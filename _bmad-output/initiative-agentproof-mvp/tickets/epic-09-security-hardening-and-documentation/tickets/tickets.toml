@@ -1,0 +1,81 @@
+# Epic 9: Security hardening and documentation. Table order is build order.
+
+[[entry]]
+id = 1
+type = "story"
+title = "README quick start with doctest extraction against the built wheel"
+description = "Writes the README quick start and the section 5 limits using the statement constants, and adds tests/e2e/test_docs.py extracting fenced blocks tagged agentproof-doctest from README and docs and running them against the wheel built in the same CI run."
+verify = "The docs test runs every tagged block green on Linux and Windows CI and fails when a README command is changed to a non-existent flag."
+covers = ["R1", "R2"]
+after = ["8.3"]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 2
+type = "story"
+title = "Reference docs for Suite format, Assertions, Traces, CLI, and security limits"
+description = "Writes docs/getting-started, suite-format, assertions (with the tool_order and compact-form examples), traces, cli (exit codes and signatures), and security pages, every limit statement taken from constants.STATEMENTS."
+verify = "Each page's tagged blocks pass the docs test, and every statement string in the pages matches a constant."
+covers = ["R1", "R7"]
+after = [1]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 3
+type = "story"
+title = "Path, symlink, device-name, locked-file, and oversized-input hardening tests"
+description = "Adds integration tests for a Scenario id containing .., a symlink escaping the Output Directory, Windows reserved names, a locked target on Windows, and an oversized Trace, each asserting the documented exit code and message."
+verify = "The hardening tests pass on Linux and Windows CI and each fails when its guard is removed."
+covers = ["R3"]
+after = ["5.3"]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 4
+type = "story"
+title = "Security policy, review record, and license file"
+description = "Writes SECURITY.md with the reporting process, completes the spec section 11.1 review checklist as a decision record, and commits the LICENSE file once the maintainer records the license decision."
+verify = "SECURITY.md and docs/decisions/security-review.md exist, every section 11.1 item is marked with its evidence, and LICENSE matches the recorded decision."
+covers = ["R4", "R5"]
+after = [3]
+hitl = true
+risk = "medium"
+unknown = "OQ-2: which license (Apache-2.0 is the candidate); the maintainer decides before this story starts."
+
+[[entry]]
+id = 5
+type = "story"
+title = "Release workflow with trusted publishing and the release checklist"
+description = "Adds release.yml publishing on a tag through PyPI trusted publishing under the decided distribution name, the spec 13.3 checklist as a release template, and a person configures the PyPI trusted publisher and cuts 0.1.0."
+verify = "A 0.1.0 tag publishes the wheel, and pip install of the decided name on a fresh machine runs the README quick start green."
+covers = ["R5"]
+after = [1, 2, 4]
+hitl = true
+risk = "high"
+unknown = "OQ-1: the distribution name (PyPI agentproof is taken); the maintainer decides before this story starts."
+references = ["_bmad-output/initiative-agentproof-mvp/prd-agentproof/prd-agentproof.md#8-hypotheses-and-evidence"]
+
+[[entry]]
+id = 6
+type = "story"
+title = "Three timed external tester runs"
+description = "A person recruits three external developers, has each follow the README from install to a passing and a failing run, records the times and friction, and files any bug found as a backlog ticket."
+verify = "docs/decisions/tester-runs.md records three runs each under five minutes, or the friction that prevented it."
+covers = ["R6"]
+after = [5]
+hitl = true
+risk = "medium"
+
+[[entry]]
+id = 7
+type = "story"
+title = "Refactor sweep"
+description = "Cleanup only, scoped at start from the plans and review findings of stories 1 to 5; no new behavior."
+verify = "uv run check stays green and the diff touches only what the sweep scope lists."
+covers = ["R1"]
+after = [1, 2, 3, 4, 5]
+hitl = false
+risk = "low"

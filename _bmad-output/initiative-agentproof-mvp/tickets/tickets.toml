@@ -1,0 +1,89 @@
+# AgentProof v0.1 epics in build order. Table order is build order; ids are permanent.
+# The user fixed the eleven epics and their order on 2026-10-22; after lines record what each needs.
+
+[[epic]]
+id = 1
+slug = "epic-01-repository-foundation-and-ci"
+title = "Repository foundation and CI"
+description = "The package installs from a locally built wheel, one check entry point runs lint, format, types, import contracts, and tests, and CI runs it on Linux and Windows across Python 3.12 to 3.15 with pinned actions."
+covers = ["R27", "R28", "R29", "C1", "C7", "C9", "C10"]
+
+[[epic]]
+id = 2
+slug = "epic-02-data-contracts-and-schema-validation"
+title = "Data contracts and schema validation"
+description = "Suite, Trace, result, and Report models exist as frozen forbid-unknown Pydantic models with integer versions, Canonical and compact serializers, generated JSON Schemas with a drift test, and valid and invalid fixtures."
+covers = ["R3", "R7", "R14", "R24", "R28", "C2", "C4", "C6"]
+after = [{ epic = 1, needs = "the package layout, check entry point, and CI" }]
+
+[[epic]]
+id = 3
+slug = "epic-03-scenario-loader-and-cli"
+title = "Scenario loader and CLI"
+description = "A Suite loads through the safe YAML loader with every violation reported, and the Typer app with its error handler, exit-code module, console scrubber, and the init, validate, and version commands works end to end on the scaffolded example."
+covers = ["R1", "R2", "R17", "R18", "R19", "R25", "C3", "C6"]
+after = [{ epic = 2, needs = "the Suite models, constants, and errors" }]
+
+[[epic]]
+id = 4
+slug = "epic-04-deterministic-assertion-engine"
+title = "Deterministic assertion engine"
+description = "The six Assertions, the evaluation and status fold, Trace parsing, the Adapter protocol with the Fixture Agent, and the runner's run pipeline make agentproof run exit 1 on the example's failing Scenario and 0 on the passing one, with every exit code reachable by test."
+covers = ["R5", "R7", "R8", "R9", "R10", "R12", "R13", "R17", "R22", "R30", "C3", "C4", "C5"]
+after = [{ epic = 3, needs = "parse_suite, the CLI app, exit codes, and the console scrubber" }, { epic = 2, needs = "the Trace, result, and outcome models" }]
+
+[[epic]]
+id = 5
+slug = "epic-05-trace-import-export-and-offline-replay"
+title = "Trace import/export and offline replay"
+description = "After the pivot interviews are recorded, run writes redacted Traces in Canonical form, Redaction runs at ingress with one rule set, trace replay re-evaluates a saved Trace with no network and no subprocess, and the secret-leak and inert-trace tests pass."
+covers = ["R4", "R6", "R11", "R19", "R26", "R31", "C5", "C6"]
+after = [{ epic = 4, needs = "the runner pipeline, parse_trace, and the engine" }, { epic = 1, needs = "the wheel build job the networkless container step installs from" }]
+
+[[epic]]
+id = 6
+slug = "epic-06-json-and-html-reports"
+title = "JSON and HTML reports"
+description = "Every run and Replay writes a versioned JSON Report embedding redacted Events, report --format html renders a self-contained escaped page with a CSP, and golden-file tests prove byte identity on Linux and Windows after stripping volatile paths."
+covers = ["R14", "R15", "R18", "R23", "R24", "R30", "C6"]
+after = [{ epic = 5, needs = "the single pipeline with Redaction and write_atomic" }]
+
+[[epic]]
+id = 7
+slug = "epic-07-baseline-comparison"
+title = "Baseline comparison"
+description = "Any JSON Report loads as a Baseline, compare reports status, Assertion, tool-sequence, selected-argument, and Scenario-set differences excluding volatile paths, exits 1 only on a regression, and says it compares saved data."
+covers = ["R16", "C3", "C6"]
+after = [{ epic = 6, needs = "the Report model, parse_report, and the volatile path list" }]
+
+[[epic]]
+id = 8
+slug = "epic-08-github-actions-example"
+title = "GitHub Actions example"
+description = "A copy-paste workflow in the repository runs the example Suite with the Fixture Agent, renders the HTML Report, uploads the Output Directory on success and failure, fails the job on a non-zero exit, and the end-to-end acceptance chain runs in the project's own CI."
+covers = ["R20", "R29"]
+after = [{ epic = 7, needs = "compare, so the acceptance chain is complete" }, { epic = 6, needs = "the report command for the HTML artifact" }, { epic = 1, needs = "the wheel build job the workflow installs from" }]
+
+[[epic]]
+id = 9
+slug = "epic-09-security-hardening-and-documentation"
+title = "Security hardening and documentation"
+description = "Reference docs, a README quick start whose commands run in CI against the built wheel, the stated limits, path and symlink hardening tests, a security policy, and three timed external tester runs make the package launch-ready."
+covers = ["R21", "R23", "R25", "R27", "C8", "C9", "C10"]
+after = [{ epic = 8, needs = "the example workflow and acceptance chain to document" }, { epic = 5, needs = "the artifact paths and atomic writer the hardening tests exercise" }]
+
+[[epic]]
+id = 10
+slug = "epic-10-optional-typescript-viewer"
+title = "Optional TypeScript viewer"
+description = "If the maintainer opens the gate, a React and Vite viewer under packages/viewer reads an exported JSON Report locally with no network, renders untrusted values as text, and shows summary, Scenarios, Assertions, timeline, details, and Comparison; otherwise nothing is built."
+covers = ["R23"]
+after = [{ epic = 6, needs = "the frozen Report schema v1" }]
+
+[[epic]]
+id = 11
+slug = "epic-11-framework-adapter-after-user-validation"
+title = "One framework adapter selected after user validation"
+description = "After the interviews pick a framework, one Adapter ships as an optional extra, passes the conformance check, documents its capture limits, and the example Suite runs against a real agent when credentials are present."
+covers = ["R13"]
+after = [{ epic = 5, needs = "the recorded interviews and Redaction in the pipeline" }, { epic = 4, needs = "the Adapter protocol, RunContext, and the conformance check" }]

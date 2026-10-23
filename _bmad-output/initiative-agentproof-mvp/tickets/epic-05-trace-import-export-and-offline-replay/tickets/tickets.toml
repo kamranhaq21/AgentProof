@@ -1,0 +1,82 @@
+# Epic 5: Trace import/export and offline replay. Table order is build order.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Pivot gate: developer interviews on H1 to H4 recorded"
+description = "A person interviews five to ten developers with the script derived from the PRD hypotheses and the competitor list, records answers and the would-be adopter count under the initiative folder, and writes a dated continue-or-pause decision."
+verify = "interviews.md exists in the initiative folder with at least five entries, the adopter count, and a dated Decision line; the maintainer confirms the decision."
+covers = ["R1"]
+after = []
+hitl = true
+risk = "high"
+done_checkpoint = true
+references = ["_bmad-output/initiative-agentproof-mvp/prd-agentproof/prd-agentproof.md#8-hypotheses-and-evidence"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Redaction at ingress"
+description = "Adds redaction.rules and redaction.redact with key, path, and environment-value scrubbing, event markers, state merging, and idempotence, and replaces the runner's placeholder so run redacts before evaluation; the runner resolves redact.env values itself."
+verify = "run on a fixture with a planted api_key argument and a declared env value in Final Output prints [REDACTED] in the summary; redacting twice equals redacting once; a Trace already carrying env_names keeps them after a second ingress."
+covers = ["R2"]
+after = [1, "4.7"]
+hitl = false
+risk = "high"
+references = ["_bmad-output/initiative-agentproof-mvp/architecture-agentproof/architecture-agentproof.md#ad-10--redaction-at-ingress-one-rule-set-one-marker-one-scrubber"]
+
+[[entry]]
+id = 3
+type = "story"
+title = "Trace export through the atomic writer"
+description = "Adds io.paths and io.artifacts.write_atomic with temp-then-rename, the symlink-escape refusal, and the ArtifactWriteError path, and makes run write scenario-<id>.trace.json in Canonical form into the Output Directory."
+verify = "After run, each Trace file validates and is byte-identical across two deterministic runs; a symlink out of the Output Directory makes the write exit 3; a locked target on Windows exits 3 naming the file and leaves the temp file."
+covers = ["R3"]
+after = [2]
+hitl = false
+risk = "medium"
+references = ["_bmad-output/initiative-agentproof-mvp/architecture-agentproof/architecture-agentproof.md#ad-14--artifact-naming-and-safe-writes"]
+
+[[entry]]
+id = 4
+type = "story"
+title = "Replay through the shared pipeline and the trace replay command"
+description = "Adds runner.replay reusing the run pipeline from parse_trace onward and wires trace replay TRACE_PATH --suite --scenario [--output DIR], printing the summary and never touching run output files."
+verify = "trace replay on an exported Trace prints the same Assertion Results and exits with the same code as the run; a missing TRACE_PATH exits 2; scenario-*.trace.json files are untouched afterwards."
+covers = ["R4"]
+after = [3]
+hitl = false
+risk = "high"
+
+[[entry]]
+id = 5
+type = "story"
+title = "Inert-Trace tests, the network and subprocess guard, and the networkless CI step"
+description = "Adds the conftest guard raising on socket and subprocess for every unmarked test, the allow_subprocess marker for CLI tests, the inert-Trace equivalence test, and a CI step running the example Suite inside docker run --network none."
+verify = "A core test that opens a socket fails; the inert-Trace fixture gives identical results to its plain twin; the networkless Docker step passes in CI."
+covers = ["R5"]
+after = [4, "1.6"]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 6
+type = "story"
+title = "Secret-leak integration test over artifacts and terminal output"
+description = "Adds the test planting values under a redacted key, in a declared environment variable placed in Final Output and a tool result, and in an adapter exception message, then asserting none appears in any file in the Output Directory or in captured output of run and replay."
+verify = "The test passes on Linux and Windows CI and fails when the runner's redaction call is removed."
+covers = ["R6"]
+after = [4]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 7
+type = "story"
+title = "Refactor sweep"
+description = "Cleanup only, scoped at start from the plans and review findings of stories 2 to 6; no new behavior."
+verify = "uv run check stays green and the diff touches only what the sweep scope lists."
+covers = ["R4"]
+after = [2, 3, 4, 5, 6]
+hitl = false
+risk = "low"
