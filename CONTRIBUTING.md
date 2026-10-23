@@ -53,6 +53,13 @@ The rules come from `PROJECT_SPEC.md` section 13.2:
 - Never commit secrets, local traces, virtual environments, build artifacts, or private
   datasets. `.gitignore` covers the usual suspects; `examples/**/traces/` is tracked on
   purpose because the documented quick start replays those traces.
+- If a push to an open pull request's branch gets no CI run at all (not even a failing
+  one), check that PR's merge state (`gh pr view <n> --json mergeable,mergeStateStatus`).
+  A PR sitting at `CONFLICTING` or `UNKNOWN` against the current base can silently stop
+  receiving `pull_request`-triggered runs; merging the base branch into the PR's branch
+  and pushing again resolves both the merge state and the missing runs. A brand-new,
+  unrelated PR still dispatches normally in this situation, which is the fastest way to
+  tell "stuck PR" apart from an account-wide Actions outage.
 
 ## Versioning policy
 

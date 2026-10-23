@@ -56,7 +56,7 @@ from pydantic import (
 from pydantic_core import InitErrorDetails, PydanticCustomError
 
 from agentproof.constants import RFC3339_WITH_OFFSET, SUPPORTED_VERSIONS
-from agentproof.models.common import JsonValue, _null_means_absent
+from agentproof.models.common import JsonValue, null_means_absent
 
 __all__ = [
     "EVENT_TYPES",
@@ -394,7 +394,7 @@ class TraceEvent(BaseModel):
     @classmethod
     def _null_is_absent(cls, data: Any) -> Any:
         """A ``null`` for a field with a default reads as the key being absent (AD-19)."""
-        return _null_means_absent(cls, data)
+        return null_means_absent(cls, data)
 
 
 class Trace(BaseModel):
@@ -445,7 +445,7 @@ class Trace(BaseModel):
     @classmethod
     def _null_is_absent(cls, data: Any) -> Any:
         """A ``null`` for a field with a default reads as the key being absent (AD-19)."""
-        return _null_means_absent(cls, data)
+        return null_means_absent(cls, data)
 
     @field_validator("events", mode="after")
     @classmethod
