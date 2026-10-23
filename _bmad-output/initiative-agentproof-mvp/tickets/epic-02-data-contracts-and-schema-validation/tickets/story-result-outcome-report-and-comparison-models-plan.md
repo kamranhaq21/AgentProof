@@ -3,7 +3,7 @@ title: 'Result, outcome, Report, and Comparison models'
 type: 'feature'
 ticket: '4'
 created: '2026-10-23'
-status: 'built'
+status: done
 baseline_revision: '2a3161fc3bfaae398589baee806f1de13917ba23'
 route: 'full'
 route_source: 'pinned'
