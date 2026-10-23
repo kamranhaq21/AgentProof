@@ -188,15 +188,15 @@ def test_version_prints_pyproject_version_and_schema_versions_and_exits_zero(
     assert result.stderr == ""
 
 
-def test_help_lists_only_version_and_the_global_options(installed_cli: Path) -> None:
+def test_help_lists_the_registered_commands_and_the_global_options(installed_cli: Path) -> None:
     result = _run([str(installed_cli), "--help"], check=False)
     assert result.returncode == 0, result.stderr
     help_text = _strip_ansi(result.stdout)
-    assert _commands_listed_in_help(help_text) == ["version"]
+    assert sorted(_commands_listed_in_help(help_text)) == ["validate", "version"]
     assert "--verbose" in help_text
     assert "--no-color" in help_text
 
 
 def test_unknown_command_exits_nonzero(installed_cli: Path) -> None:
-    result = _run([str(installed_cli), "validate", "x.yaml"], check=False)
+    result = _run([str(installed_cli), "frobnicate", "x.yaml"], check=False)
     assert result.returncode != 0
