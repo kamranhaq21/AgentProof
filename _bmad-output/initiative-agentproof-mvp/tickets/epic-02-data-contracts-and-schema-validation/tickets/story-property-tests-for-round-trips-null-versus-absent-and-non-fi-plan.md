@@ -3,7 +3,7 @@ title: 'Property tests for round trips, null versus absent, and non-finite numbe
 type: 'feature'
 ticket: '6'
 created: '2026-10-23'
-status: in-progress
+status: done
 baseline_revision: 'fca6286427e55f823cb7560090bf0c6a491eecc5'
 route: 'full'
 route_source: 'pinned'
