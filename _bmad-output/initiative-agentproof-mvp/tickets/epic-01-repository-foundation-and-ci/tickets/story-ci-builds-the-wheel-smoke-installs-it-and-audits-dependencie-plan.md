@@ -3,7 +3,7 @@ title: 'CI builds the wheel, smoke-installs it, and audits dependencies'
 type: 'feature'
 ticket: '6'
 created: '2026-10-23'
-status: 'built'
+status: done
 baseline_revision: '037860bff77ad0fedf08d0a08b3707002d3cafdb'
 route: 'full'
 route_source: 'pinned'
