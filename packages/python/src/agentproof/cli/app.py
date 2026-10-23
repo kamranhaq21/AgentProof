@@ -36,6 +36,7 @@ from typing import Annotated, cast
 
 import typer
 
+from agentproof.cli.commands.validate import validate
 from agentproof.cli.commands.version import version
 from agentproof.cli.exit_codes import (
     EXIT_EXECUTION_ERROR,
@@ -187,6 +188,7 @@ def _root(
 
 
 app.command("version")(_handled(version))
+app.command("validate")(_handled(validate))
 
 
 def main() -> None:
