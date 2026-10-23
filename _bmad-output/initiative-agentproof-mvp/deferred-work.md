@@ -36,3 +36,6 @@
 - source: story 2.5 (generated JSON Schemas), 2026-10-23
   summary: an unsupported `version` is `literal_error` for a Suite (story 2.2 chose `Literal[1]`) but `unsupported_version` for a Trace and a Report, so the loaders cannot key on one code; decide one code across the three models (a validation change, hence a cross-model decision). The fixtures `suite__literal_error__version` and `trace__unsupported_version__version` name what each model raises today.
   owner: story 2.7 (refactor sweep).
+- source: story 3.1 review, 2026-10-23
+  summary: the CLI error handler prints `str(exc)` for exit 3 and 4, the traceback under `--verbose`, and unwrapped violation messages without running `scrub_text`, so a secret value inside an exception message reaches stderr. Strict `xfail` tests (`test_a_planted_secret_never_reaches_the_output` in `tests/unit/cli/test_error_handler.py`) pin the gap; when `io.console` scrubs every print they XPASS and fail, and must be flipped to plain tests.
+  owner: story 3.5 (console scrubber and logging filter).
