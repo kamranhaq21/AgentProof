@@ -9,6 +9,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tarfile
 import tomllib
 import zipfile
 from collections.abc import Sequence
@@ -127,6 +128,24 @@ def test_wheel_contains_only_the_agentproof_package(installed_cli: Path) -> None
     allowed = ("agentproof/", f"agentproof-{_pyproject_version()}.dist-info/")
     assert all(member.startswith(allowed) for member in members), members
     assert not any("agentproof_devtools" in member for member in members), members
+
+
+def test_sdist_carries_the_project_but_not_devtools_or_tests(tmp_path: Path) -> None:
+    """Story 1.7: the source archive, a release asset since story 1.6, ships neither the
+    devtools workspace member nor the test suite (``[tool.hatch.build.targets.sdist]``)."""
+    dist_dir = tmp_path / "dist"
+    _run([_uv(), "build", "--sdist", "--out-dir", str(dist_dir)], cwd=PACKAGE_ROOT)
+    archives = sorted(dist_dir.glob("agentproof-*.tar.gz"))
+    assert len(archives) == 1, f"expected exactly one sdist, found {archives}"
+    assert archives[0].name == f"agentproof-{_pyproject_version()}.tar.gz"
+    with tarfile.open(archives[0]) as archive:
+        members = archive.getnames()
+    root = f"agentproof-{_pyproject_version()}"
+    assert all(member == root or member.startswith(f"{root}/") for member in members), members
+    inside = {member.removeprefix(f"{root}/") for member in members}
+    assert {"pyproject.toml", "PKG-INFO", "src/agentproof/__init__.py"} <= inside, sorted(inside)
+    excluded = [m for m in inside if m == "devtools" or m.startswith(("devtools/", "tests/"))]
+    assert excluded == [] and "tests" not in inside, excluded
 
 
 def test_version_prints_pyproject_version_and_exits_zero(installed_cli: Path) -> None:

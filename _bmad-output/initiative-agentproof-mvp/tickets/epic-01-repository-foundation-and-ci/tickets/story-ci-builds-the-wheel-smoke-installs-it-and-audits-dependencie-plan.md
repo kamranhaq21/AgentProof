@@ -37,7 +37,7 @@ context: []
 |----------|--------------|---------------------------|----------------|
 | Pull request | the story branch | `wheel` uploads `agentproof-0.1.0.dev0-py3-none-any.whl` as artifact `wheel`; `smoke (ubuntu-latest)` and `smoke (windows-latest)` install it into a fresh venv and print `0.1.0.dev0` with exit 0; `audit` passes | No error expected |
 | Known vulnerability | a dependency with an advisory in the lock (simulated locally by auditing a requirements file that pins a known-vulnerable version) | `pip-audit` exits non-zero | job fails |
-| Tag push | `v0.0.0-test` pushed by the orchestrator | a draft release exists with the wheel attached; `gh release view` shows `isDraft: true`; nothing on PyPI | No error expected |
+| Tag push | `v0.1.0.dev0` (the declared version; review finding 3 added the tag guard) pushed by the orchestrator | a draft release exists with the wheel and sdist attached; `gh release view` shows `isDraft: true`; nothing on PyPI | No error expected |
 | Pin test | every `.github/workflows/*.yml` | every `uses:` SHA-pinned with a version comment; release workflow permissions exactly `contents: write`; no `publish`, `twine`, or `pypi` token in any workflow | test failure otherwise |
 
 </frozen-after-approval>
@@ -57,7 +57,7 @@ context: []
 - [x] `.github/workflows/release-draft.yml` -- draft release on tag with `gh` -- criterion 3
 - [x] `packages/python/tests/unit/test_workflow_pins.py` -- extend to every workflow; release permissions; no-publish; job shapes -- criterion 4
 - [x] local verification -- `uv run check` green; the known-vulnerability audit proof recorded
-- [ ] orchestrator -- push, pull request, confirm `wheel`, `smoke`, `audit` green on the PR, push a `v0.0.0-test` tag, confirm the draft release, delete the test tag and draft release, record evidence
+- [x] orchestrator -- push, pull request, confirm `wheel`, `smoke`, `audit` green on the PR, push a `v0.1.0.dev0` tag, confirm the draft release, delete the test tag and draft release, record evidence (see Orchestrator evidence below)
 
 **Acceptance Criteria:**
 - Given the pull request, when CI runs, then `wheel`, both `smoke` jobs, and `audit` pass alongside the eight `check` jobs, and the smoke output shows `0.1.0.dev0`.
@@ -88,6 +88,12 @@ context: []
 - **Smoke path dry-run (what the `smoke` job does, on this machine).** `uv build --wheel --out-dir <scratch>/dist` in `packages/python` -> `agentproof-0.1.0.dev0-py3-none-any.whl`; `unzip -l` shows 20 entries, 4701 bytes: `agentproof/__init__.py`, `constants.py`, `errors.py`, the 13 subpackage `__init__.py` files (`adapters`, `assertions`, `cli`, `compare`, `engine`, `io`, `loading`, `models`, `redaction`, `reports`, `runner`, `testing`) plus `cli/app.py`, and the four `dist-info` files; nothing from `devtools` or `tests`, so the wheel contents are the story 1.1 set. `uv venv .smoke --python 3.12`, `uv pip install --python .smoke dist/*.whl` -> exit 0; `.smoke/Scripts/agentproof version` -> `0.1.0.dev0`, exit 0, equal to `version = "0.1.0.dev0"` in `pyproject.toml` (`MATCH`). The exact CI step script was not run as a unit here, but each of its commands was.
 - **Housekeeping.** Files were written with LF endings; git reports it will normalise to CRLF in the working copy (`core.autocrlf`), which does not affect the committed content. The scratch directories (`audit-proof`, `smoke`, `backup`) and the `.pytest_cache`, `.ruff_cache`, `.mypy_cache`, and `__pycache__` directories my runs created in the worktree were removed, and `uv cache clean pip-audit` dropped the 37 cached pip-audit files; the worktree's `.venv` stays, as instructed. One slip: the first sweep also deleted the `__pycache__` bytecode directories inside `.venv/Lib/site-packages` (a mis-targeted `-prune`); that is regenerated on import and nothing else in the venv was touched. Verified afterwards: `uv run --no-sync python -c "import pytest, yaml, pydantic, mypy, ruff, agentproof, agentproof_devtools"` -> `venv ok 0.1.0.dev0`, and the pin tests -> `25 passed`.
 - **Not done here, by design (orchestrator steps):** push, pull request, confirming `wheel`, `smoke (ubuntu-latest)`, `smoke (windows-latest)`, and `audit` green on the PR, the `v0.0.0-test` tag, confirming and then deleting the draft release and tag. **Risks until the PR runs:** nothing above is proven on a GitHub runner; `uvx pip-audit` installs the current pip-audit release unpinned (not in the plan's scope; a `pip-audit==<version>` pin is a possible follow-up if reproducibility of the audit tool matters); `gh release create` fails if a release for the tag already exists, so re-running a tag push after a draft exists needs the draft deleted first; `--generate-notes` on the first tag generates notes from the whole history, which is fine for a draft.
+
+### Orchestrator evidence (2026-10-23, recorded by story 1.7)
+
+- Branch rebased onto `backlog` at 17c885a (story 2.1 merged); `uv run check` in the worktree: ruff clean, 36 files formatted, mypy clean (18 source files), `lint-imports` Contracts: 7 kept, 0 broken, `249 passed`, exit 0. (The implementer's "3 contracts KEPT" above was read off a differently grouped summary line; the contract count on this branch is 7.)
+- Commit c20b425, pull request #3 against `backlog`: all twelve jobs green (eight `check`, `wheel`, `smoke (ubuntu-latest)`, `smoke (windows-latest)`, `audit`). The Windows smoke log printed `agentproof version -> '0.1.0.dev0' (expected '0.1.0.dev0')`; the audit log printed `No known vulnerabilities found` after `Resolved 29 packages`. Merged as cbecff1.
+- Tag `v0.1.0.dev0` pushed at 05ed167: release-draft run 39902388238 attempt 1 succeeded; `gh release view v0.1.0.dev0 --json isDraft,assets` returned `isDraft: true` with `agentproof-0.1.0.dev0-py3-none-any.whl` and `agentproof-0.1.0.dev0.tar.gz`. Attempt 2 (re-run with the release already present) also succeeded through the `gh release upload --clobber` branch; the release stayed a draft with the same two assets. Draft release and tag then deleted (remote and local); `gh release list` and the tags API return nothing.
 
 ## Plan Change Log
 

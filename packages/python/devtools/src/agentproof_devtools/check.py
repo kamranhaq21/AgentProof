@@ -21,7 +21,7 @@ from agentproof_devtools.purity import CORE_PACKAGES
 
 # ``packages/python``: the directory holding ``pyproject.toml`` and ``uv.lock``. This
 # only holds for an editable install of devtools (uv's default for workspace
-# members); story 1.4's CI must keep it editable or set the root explicitly.
+# members); CI installs it the same way, through ``uv sync --locked`` (story 1.4).
 PACKAGE_ROOT = Path(__file__).resolve().parents[3]
 # The git repository root, where ``.importlinter`` lives (story 1.3).
 REPOSITORY_ROOT = PACKAGE_ROOT.parents[1]
